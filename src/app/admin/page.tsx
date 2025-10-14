@@ -1,0 +1,98 @@
+'use client';
+
+import { useMemo } from 'react';
+import { useFirebase } from '@/firebase/provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
+
+export default function AdminPage() {
+  const { firestore } = useFirebase();
+
+  const appointmentsQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'appointments'),
+      orderBy('startTime', 'desc')
+    );
+  }, [firestore]);
+
+  const {
+    data: appointments,
+    isLoading,
+    error,
+  } = useCollection(appointmentsQuery);
+
+  return (
+    <div className="container py-12">
+      <h1 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl mb-8">
+        Panel de Administrador
+      </h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>Citas Agendadas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading && (
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          )}
+          {error && (
+            <p className="text-destructive">
+              Error al cargar las citas: {error.message}
+            </p>
+          )}
+          {!isLoading && !error && appointments && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Fecha y Hora</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Motivo</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {appointments.map((apt) => (
+                  <TableRow key={apt.id}>
+                    <TableCell>{apt.clientName}</TableCell>
+                    <TableCell>{apt.clientEmail}</TableCell>
+                    <TableCell>
+                      {format(apt.startTime.toDate(), 'PPP p')}
+                    </TableCell>
+                    <TableCell>
+                      <Badge>{apt.status}</Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate">
+                      {apt.notes}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+           {!isLoading && appointments?.length === 0 && (
+            <div className="text-center text-muted-foreground py-8">
+              No hay citas agendadas.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

@@ -4,8 +4,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { add, format, isPast, isToday, startOfToday } from "date-fns";
+import { isPast, isToday } from "date-fns";
+import { format } from 'date-fns-tz';
 import { Calendar as CalendarIcon, Clock, CheckCircle } from "lucide-react";
+import { collection, addDoc, Timestamp } from "firebase/firestore";
+
 
 import { AppointmentSchema } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
@@ -24,6 +27,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useFirebase } from "@/firebase/provider";
+import { addDocumentNonBlocking } from "@/firebase";
 
 type AppointmentFormData = z.infer<typeof AppointmentSchema>;
 
@@ -34,9 +39,11 @@ const availableTimes = [
 
 export default function SchedulePage() {
   const { toast } = useToast();
+  const { firestore } = useFirebase();
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(AppointmentSchema),
@@ -48,13 +55,41 @@ export default function SchedulePage() {
     },
   });
 
-  const onSubmit = (data: AppointmentFormData) => {
-    console.log("Appointment Booked:", { ...data, date, time: selectedTime });
-    setIsConfirmed(true);
-    toast({
-      title: "Appointment Confirmed!",
-      description: `Your consultation is set for ${format(date!, "PPP")} at ${selectedTime}.`,
-    });
+  const onSubmit = async (data: AppointmentFormData) => {
+    if (!firestore || !date || !selectedTime) return;
+    setIsLoading(true);
+
+    const fullDateTime = getFullDateTime(selectedTime);
+
+    try {
+      const appointmentData = {
+        clientName: data.name,
+        clientEmail: data.email,
+        clientPhone: data.phone,
+        notes: data.issue,
+        startTime: Timestamp.fromDate(fullDateTime),
+        status: "scheduled",
+        createdAt: Timestamp.now(),
+      };
+      
+      const appointmentsCol = collection(firestore, 'appointments');
+      addDocumentNonBlocking(appointmentsCol, appointmentData);
+      
+      setIsConfirmed(true);
+      toast({
+        title: "Cita Confirmada!",
+        description: `Su consulta está programada para el ${format(fullDateTime, "PPP 'a las' p", { timeZone: 'UTC' })}.`,
+      });
+    } catch (error) {
+      console.error("Error al agendar la cita:", error);
+      toast({
+        variant: "destructive",
+        title: "¡Oh, oh! Algo salió mal.",
+        description: "No se pudo agendar la cita. Por favor, inténtelo de nuevo.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getFullDateTime = (time: string): Date => {
@@ -66,13 +101,14 @@ export default function SchedulePage() {
   };
 
   if (isConfirmed) {
+    const fullDateTime = getFullDateTime(selectedTime!);
     return (
       <div className="container py-24 sm:py-32">
         <Alert variant="default" className="max-w-2xl mx-auto border-green-500 bg-green-50 dark:bg-green-950">
           <CheckCircle className="h-4 w-4 text-green-500" />
-          <AlertTitle className="text-green-700 dark:text-green-400">Appointment Confirmed!</AlertTitle>
+          <AlertTitle className="text-green-700 dark:text-green-400">¡Cita Confirmada!</AlertTitle>
           <AlertDescription>
-            Your consultation is booked for {format(date!, "PPP")} at {selectedTime}. You will receive a confirmation email shortly.
+            Su consulta está agendada para el {format(fullDateTime, "PPP 'a las' p", { timeZone: 'UTC' })}. Recibirá un correo de confirmación en breve.
           </AlertDescription>
         </Alert>
       </div>
@@ -83,10 +119,10 @@ export default function SchedulePage() {
     <div className="container py-24 sm:py-32">
       <div className="text-center max-w-2xl mx-auto">
         <h1 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl">
-          Schedule a Consultation
+          Agendar una Consulta
         </h1>
         <p className="mt-4 text-lg leading-8 text-foreground/80">
-          Choose a date and time that works for you. We look forward to speaking with you.
+          Elija una fecha y hora que le convenga. Esperamos poder hablar con usted.
         </p>
       </div>
 
@@ -95,7 +131,7 @@ export default function SchedulePage() {
           <CardHeader>
              <CardTitle className="flex items-center gap-2 text-primary font-headline">
                <CalendarIcon className="h-5 w-5" />
-               1. Select a Date
+               1. Seleccione una Fecha
              </CardTitle>
           </CardHeader>
           <CardContent className="flex justify-center items-center flex-grow">
@@ -116,15 +152,15 @@ export default function SchedulePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary font-headline">
               <Clock className="h-5 w-5" />
-              2. Select a Time
+              2. Seleccione una Hora
             </CardTitle>
-            <p className="text-sm text-muted-foreground pt-1">{date ? format(date, 'EEEE, MMMM d') : 'Please select a day'}</p>
+            <p className="text-sm text-muted-foreground pt-1">{date ? format(date, 'EEEE, d \'de\' MMMM', { timeZone: 'UTC' }) : 'Por favor seleccione un día'}</p>
           </CardHeader>
           <CardContent>
              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {availableTimes.map((time) => {
                     const fullDateTime = getFullDateTime(time);
-                    const isTimePast = isPast(fullDateTime);
+                    const isTimePast = date && isToday(date) ? isPast(fullDateTime) : false;
                     return (
                         <Button
                             key={time}
@@ -146,9 +182,9 @@ export default function SchedulePage() {
         <div className="max-w-3xl mx-auto mt-12">
             <Card>
                 <CardHeader>
-                    <CardTitle className="font-headline text-primary">3. Your Information</CardTitle>
+                    <CardTitle className="font-headline text-primary">3. Su Información</CardTitle>
                     <p className="text-sm text-muted-foreground pt-1">
-                        For your appointment on {format(date, 'PPP')} at {selectedTime}.
+                        Para su cita el {format(date, 'PPP', { timeZone: 'UTC' })} a las {selectedTime}.
                     </p>
                 </CardHeader>
                 <CardContent>
@@ -159,7 +195,7 @@ export default function SchedulePage() {
                         name="name"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Full Name</FormLabel>
+                            <FormLabel>Nombre Completo</FormLabel>
                             <FormControl>
                                 <Input placeholder="John Doe" {...field} />
                             </FormControl>
@@ -173,7 +209,7 @@ export default function SchedulePage() {
                             name="email"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Email Address</FormLabel>
+                                <FormLabel>Correo Electrónico</FormLabel>
                                 <FormControl>
                                 <Input placeholder="john.doe@example.com" {...field} />
                                 </FormControl>
@@ -186,7 +222,7 @@ export default function SchedulePage() {
                             name="phone"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Phone Number</FormLabel>
+                                <FormLabel>Número de Teléfono</FormLabel>
                                 <FormControl>
                                 <Input placeholder="(555) 123-4567" {...field} />
                                 </FormControl>
@@ -200,10 +236,10 @@ export default function SchedulePage() {
                         name="issue"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Briefly describe your legal issue</FormLabel>
+                            <FormLabel>Describa brevemente su asunto legal</FormLabel>
                             <FormControl>
                                 <Textarea
-                                placeholder="Tell us a little about why you're reaching out..."
+                                placeholder="Cuéntenos un poco sobre por qué nos contacta..."
                                 {...field}
                                 />
                             </FormControl>
@@ -211,8 +247,8 @@ export default function SchedulePage() {
                             </FormItem>
                         )}
                         />
-                        <Button type="submit" size="lg" className="w-full">
-                        Book Appointment
+                        <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+                          {isLoading ? 'Agendando...' : 'Agendar Cita'}
                         </Button>
                     </form>
                     </Form>

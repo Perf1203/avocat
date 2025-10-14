@@ -6,10 +6,11 @@ import {
   BookOpen,
   Gavel,
   Landmark,
-  Loader2,
   PenSquare,
   Sparkles,
   Wand2,
+  DollarSign,
+  Scale
 } from "lucide-react";
 import Link from "next/link";
 
@@ -59,17 +60,24 @@ export default function Home() {
   );
   const [callToAction, setCallToAction] = useState("Schedule a Consultation");
 
+  const [pricePerHour, setPricePerHour] = useState(250);
+  const [flatRate, setFlatRate] = useState(1000);
+
   const [isEditing, setIsEditing] = useState(false);
   const [showSuggestionTool, setShowSuggestionTool] = useState(false);
 
   const [tempHeadline, setTempHeadline] = useState(headline);
   const [tempBody, setTempBody] = useState(body);
   const [tempCallToAction, setTempCallToAction] = useState(callToAction);
+  const [tempPricePerHour, setTempPricePerHour] = useState(pricePerHour);
+  const [tempFlatRate, setTempFlatRate] = useState(flatRate);
 
   const handleSaveChanges = () => {
     setHeadline(tempHeadline);
     setBody(tempBody);
     setCallToAction(tempCallToAction);
+    setPricePerHour(tempPricePerHour);
+    setFlatRate(tempFlatRate);
     setIsEditing(false);
   };
 
@@ -77,6 +85,8 @@ export default function Home() {
     setTempHeadline(headline);
     setTempBody(body);
     setTempCallToAction(callToAction);
+    setTempPricePerHour(pricePerHour);
+    setTempFlatRate(flatRate);
     setIsEditing(false);
   };
   
@@ -152,6 +162,45 @@ export default function Home() {
           </div>
         </section>
 
+        <section className="bg-secondary py-24 sm:py-32">
+          <div className="container">
+            <div className="text-center max-w-2xl mx-auto">
+              <h2 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+                Precios de Consulta
+              </h2>
+              <p className="mt-4 text-lg leading-8 text-foreground/80">
+                Planes transparentes y flexibles que se adaptan a sus necesidades.
+              </p>
+            </div>
+            <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 max-w-2xl mx-auto">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign />
+                    Por Hora
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-4xl font-bold">${pricePerHour}</p>
+                  <p className="text-muted-foreground">Ideal para consultas específicas y asesoramiento continuo.</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Scale />
+                    Tarifa Plana
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-4xl font-bold">${flatRate}</p>
+                  <p className="text-muted-foreground">Perfecto para proyectos definidos y presupuestos predecibles.</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
         {isEditing && (
           <div className="fixed bottom-4 right-4 left-4 z-50">
             <Card className="max-w-4xl mx-auto p-6 shadow-2xl">
@@ -190,6 +239,26 @@ export default function Home() {
                     value={tempCallToAction}
                     onChange={(e) => setTempCallToAction(e.target.value)}
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="price-per-hour">Precio Por Hora</Label>
+                    <Input
+                      id="price-per-hour"
+                      type="number"
+                      value={tempPricePerHour}
+                      onChange={(e) => setTempPricePerHour(Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="flat-rate">Tarifa Plana</Label>
+                    <Input
+                      id="flat-rate"
+                      type="number"
+                      value={tempFlatRate}
+                      onChange={(e) => setTempFlatRate(Number(e.target.value))}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2 mt-6">
