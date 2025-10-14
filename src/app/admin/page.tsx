@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useFirebase } from '@/firebase/provider';
+import { useMemoFirebase, useFirebase } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -20,8 +19,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function AdminPage() {
   const { firestore } = useFirebase();
 
-  const appointmentsQuery = useMemo(() => {
+  const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
+    // The collection path is now `/clients/{clientId}/appointments/{appointmentId}`
+    // but for an admin view, we need a root-level collection. The previous implementation
+    // was writing to a root `appointments` collection. Let's assume that's what we want to read from.
+    // If the data model was strictly enforced, we'd need a collectionGroup query here.
+    // For simplicity, we'll query the root `appointments` collection which schedule/page.tsx writes to.
     return query(
       collection(firestore, 'appointments'),
       orderBy('startTime', 'desc')
@@ -68,12 +72,12 @@ export default function AdminPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {appointments.map((apt) => (
+                {appointments.map((apt: any) => (
                   <TableRow key={apt.id}>
                     <TableCell>{apt.clientName}</TableCell>
                     <TableCell>{apt.clientEmail}</TableCell>
                     <TableCell>
-                      {format(apt.startTime.toDate(), 'PPP p')}
+                      {apt.startTime && format(apt.startTime.toDate(), 'PPP p')}
                     </TableCell>
                     <TableCell>
                       <Badge>{apt.status}</Badge>
