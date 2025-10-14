@@ -1,0 +1,239 @@
+{
+  "entities": {
+    "Appointment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Appointment",
+      "type": "object",
+      "description": "Represents a scheduled appointment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the appointment."
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Reference to Client. (Relationship: Client 1:N Appointment)"
+        },
+        "startTime": {
+          "type": "string",
+          "description": "The date and time the appointment is scheduled to begin.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "The date and time the appointment is scheduled to end.",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Any notes or relevant information about the appointment."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the appointment (e.g., scheduled, confirmed, cancelled, completed)."
+        }
+      },
+      "required": [
+        "id",
+        "clientId",
+        "startTime",
+        "endTime",
+        "status"
+      ]
+    },
+    "Client": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Client",
+      "type": "object",
+      "description": "Represents a client of the law firm.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the client."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the client."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the client."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the client.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The phone number of the client."
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "phoneNumber"
+      ]
+    },
+    "ConsultationPrice": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ConsultationPrice",
+      "type": "object",
+      "description": "Represents the pricing for consultations.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the price configuration."
+        },
+        "pricePerHour": {
+          "type": "number",
+          "description": "The price charged per hour for consultations."
+        },
+        "flatRate": {
+          "type": "number",
+          "description": "A flat rate charged for a consultation, regardless of duration."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the pricing structure."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "LandingPageContent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LandingPageContent",
+      "type": "object",
+      "description": "Stores content for the landing page, managed by administrators.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the content section."
+        },
+        "sectionName": {
+          "type": "string",
+          "description": "Name of the section on the landing page (e.g., 'Hero', 'About Us')."
+        },
+        "headline": {
+          "type": "string",
+          "description": "The main headline text for the section."
+        },
+        "bodyText": {
+          "type": "string",
+          "description": "The body text content for the section."
+        },
+        "callToActionText": {
+          "type": "string",
+          "description": "The text for the call to action button or link."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the image associated with the section."
+        }
+      },
+      "required": [
+        "id",
+        "sectionName"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/clients/{clientId}",
+        "definition": {
+          "entityName": "Client",
+          "schema": {
+            "$ref": "#/backend/entities/Client"
+          },
+          "description": "Stores client information. Appointments are stored as subcollections. Provides path-based ownership for client data.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier for the client."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clients/{clientId}/appointments/{appointmentId}",
+        "definition": {
+          "entityName": "Appointment",
+          "schema": {
+            "$ref": "#/backend/entities/Appointment"
+          },
+          "description": "Stores appointment details for a specific client. Uses path-based ownership for security. `clientId` is denormalized from the client document.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier for the client."
+            },
+            {
+              "name": "appointmentId",
+              "description": "The unique identifier for the appointment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/consultation_prices/{priceId}",
+        "definition": {
+          "entityName": "ConsultationPrice",
+          "schema": {
+            "$ref": "#/backend/entities/ConsultationPrice"
+          },
+          "description": "Stores pricing information for consultations. Accessible and modifiable by admins only.",
+          "params": [
+            {
+              "name": "priceId",
+              "description": "The unique identifier for the consultation price."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/landing_page_content/{contentId}",
+        "definition": {
+          "entityName": "LandingPageContent",
+          "schema": {
+            "$ref": "#/backend/entities/LandingPageContent"
+          },
+          "description": "Stores content for the landing page.  Accessible and modifiable by admins only.",
+          "params": [
+            {
+              "name": "contentId",
+              "description": "The unique identifier for the landing page content."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "role_admin",
+          "schema": {
+            "$ref": "#/backend/entities/Client"
+          },
+          "description": "Documents in this collection grant admin access. Existence of a document indicates admin role. Used for global role management.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to accommodate the application's requirements for appointment scheduling, landing page content management, and dynamic content suggestions. It prioritizes authorization independence and supports secure list operations (QAPs). \n\n1.  **Authorization Independence:** Access to appointments is controlled through path-based ownership. Each client's appointments are stored under their own document (`/clients/{clientId}/appointments/{appointmentId}`). Administrative access is granted via the `/roles_admin/{uid}` collection.  This eliminates the need for `get()` calls in security rules, ensuring atomic operations.\n\n2.  **Structural Segregation:**  `ConsultationPrice` and `LandingPageContent` are placed in separate collections with distinct security profiles.  This ensures that data with different access needs is not mixed, simplifying security rules.\n\n3.  **Access Modeling:**  Path-based ownership is employed for `Client` and `Appointment` data. The `roles_admin` collection uses existence-based global roles.\n\n4.  **QAPs (Rules Are Not Filters):** Segregating data based on ownership allows for efficient and secure list operations. For instance, a client can only list appointments under their `clientId`, and admins can list all appointments.\n\nDenormalization is not explicitly required in this design because path-based ownership provides sufficient authorization context without needing to copy data. If, in the future, more complex authorization schemes are introduced (e.g., sharing appointments with other users), denormalization of a `members` map into the `/clients/{clientId}/appointments/{appointmentId}` collection would be necessary."
+  }
+}
