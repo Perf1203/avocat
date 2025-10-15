@@ -78,7 +78,7 @@ export default function Home() {
   const [headline, setHeadline] = useState("");
   const [body, setBody] = useState("");
   const [callToAction, setCallToAction] = useState("");
-  const [heroImageUrl, setHeroImageUrl] = useState(defaultHeroImage?.imageUrl || "");
+  const [heroImageUrl, setHeroImageUrl] = useState("");
   const [pricePerHour, setPricePerHour] = useState(0);
   const [flatRate, setFlatRate] = useState(0);
 
@@ -110,8 +110,24 @@ export default function Home() {
       setTempBody(initialBody);
       setTempCallToAction(initialCta);
       setTempHeroImageUrl(initialImageUrl);
+    } else if (!isContentLoading && !contentData) {
+        // Fallback to defaults if data is loaded but empty
+        const defaultHeadline = "Expertiză Juridică de Încredere pentru Provocări Moderne";
+        const defaultBody = "Avocat Law oferă servicii juridice de prim rang, adaptate nevoilor dumneavoastră unice. Echipa noastră de avocați cu experiență este dedicată obținerii celor mai bune rezultate posibile pentru clienții noștri prin consiliere strategică și pledoarie neobosită.";
+        const defaultCta = "Programează o Consultație";
+        const defaultImg = defaultHeroImage?.imageUrl || "";
+        
+        setHeadline(defaultHeadline);
+        setBody(defaultBody);
+        setCallToAction(defaultCta);
+        setHeroImageUrl(defaultImg);
+
+        setTempHeadline(defaultHeadline);
+        setTempBody(defaultBody);
+        setTempCallToAction(defaultCta);
+        setTempHeroImageUrl(defaultImg);
     }
-  }, [contentData]);
+  }, [contentData, isContentLoading]);
 
   useEffect(() => {
     if (priceData) {
@@ -183,19 +199,12 @@ export default function Home() {
     <>
       <div className="relative isolate">
         <section className="relative h-[60vh] min-h-[500px] w-full">
-          {heroImageUrl ? (
+          {isLoading ? (
+            <Skeleton className="absolute inset-0" />
+          ) : (
             <Image
-              src={heroImageUrl}
+              src={heroImageUrl || (defaultHeroImage?.imageUrl || "")}
               alt={headline || "Avocat Law hero image"}
-              fill
-              className="object-cover"
-              priority
-            />
-          ) : defaultHeroImage && (
-            <Image
-              src={defaultHeroImage.imageUrl}
-              alt={defaultHeroImage.description}
-              data-ai-hint={defaultHeroImage.imageHint}
               fill
               className="object-cover"
               priority
