@@ -78,7 +78,7 @@ export default function Home() {
   const [headline, setHeadline] = useState("");
   const [body, setBody] = useState("");
   const [callToAction, setCallToAction] = useState("");
-  const [heroImageUrl, setHeroImageUrl] = useState("");
+  const [heroImageUrl, setHeroImageUrl] = useState(defaultHeroImage?.imageUrl || "");
   const [pricePerHour, setPricePerHour] = useState(0);
   const [flatRate, setFlatRate] = useState(0);
 
