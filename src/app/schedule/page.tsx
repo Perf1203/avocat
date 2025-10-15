@@ -109,7 +109,7 @@ export default function SchedulePage() {
           <CheckCircle className="h-4 w-4 text-green-500" />
           <AlertTitle className="text-green-700 dark:text-green-400">¡Cita Confirmada!</AlertTitle>
           <AlertDescription>
-            Su consulta está agendada para el {format(fullDateTime, "PPP 'a las' p")}. Recibirá un correo de confirmación en breve.
+            Su consulta está agendada para el {format(fullDateTime, "PPP 'a las' p")}.
           </AlertDescription>
         </Alert>
       </div>
