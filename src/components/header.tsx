@@ -3,22 +3,33 @@
 import { Menu, Scale } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { doc } from 'firebase/firestore';
 
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useFirebase, useUser, useDoc, useMemoFirebase } from '@/firebase';
 
 const navItems = [
   { href: "/", label: "Acasă" },
   { href: "/schedule", label: "Programează o consultație" },
-  { href: "/admin", label: "Admin" },
 ];
 
 export function Header() {
   const pathname = usePathname();
+  const { user } = useUser();
+  const { firestore } = useFirebase();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  const registrationSettingsRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'app_settings', 'registration');
+  }, [firestore]);
+
+  const { data: registrationSettings } = useDoc(registrationSettingsRef);
+  const isRegistrationOpen = registrationSettings?.isPublicRegistrationOpen === true;
 
   const NavLinks = ({ className }: { className?: string }) => (
     <nav className={cn("flex items-center gap-6 text-sm font-medium", className)}>
@@ -35,6 +46,30 @@ export function Header() {
           {item.label}
         </Link>
       ))}
+       {isRegistrationOpen && !user && (
+        <Link
+          href="/register"
+          className={cn(
+            "transition-colors hover:text-primary",
+            pathname === "/register" ? "text-primary" : "text-muted-foreground"
+          )}
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          Creare Cont
+        </Link>
+      )}
+      {user && (
+         <Link
+          href="/admin"
+          className={cn(
+            "transition-colors hover:text-primary",
+            pathname === "/admin" ? "text-primary" : "text-muted-foreground"
+          )}
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          Admin
+        </Link>
+      )}
     </nav>
   );
 
@@ -42,7 +77,9 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <div className="mr-8 hidden md:flex">
-          <Logo />
+          <Link href="/">
+            <Logo />
+          </Link>
         </div>
 
         <div className="flex-1 flex items-center justify-between md:justify-end">

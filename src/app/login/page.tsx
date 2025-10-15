@@ -25,10 +25,10 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, FirestorePermissionError, errorEmitter } from '@/firebase';
+import { useAuth } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Vă rugăm să introduceți un email valid.' }),
@@ -50,6 +50,31 @@ export default function LoginPage() {
       password: '',
     },
   });
+  
+  const handlePasswordReset = async () => {
+    const email = form.getValues('email');
+    if (!email) {
+      form.setError('email', {
+        type: 'manual',
+        message: 'Vă rugăm să introduceți adresa de email pentru a reseta parola.',
+      });
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: 'Email de resetare trimis',
+        description: 'Verificați-vă inbox-ul pentru a vă reseta parola.',
+      });
+    } catch (error: any) {
+      console.error('Eroare la resetarea parolei:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Eroare',
+        description: error.message || 'Nu am putut trimite emailul de resetare. Vă rugăm să încercați din nou.',
+      });
+    }
+  };
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
@@ -123,6 +148,14 @@ export default function LoginPage() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isLoading ? 'Autentificare...' : 'Autentificare'}
+              </Button>
+               <Button
+                variant="link"
+                type="button"
+                className="text-sm font-medium text-muted-foreground"
+                onClick={handlePasswordReset}
+              >
+                Ați uitat parola?
               </Button>
             </CardFooter>
           </form>
