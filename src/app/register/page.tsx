@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -26,46 +27,54 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
-const loginSchema = z.object({
+const registerSchema = z.object({
   email: z.string().email({ message: 'Por favor ingrese un correo válido.' }),
   password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
     defaultValues: {
       email: '',
       password: '',
     },
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = async (data: RegisterFormValues) => {
+    if (!firestore) return;
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
+
+      // Add user to the admin role collection
+      const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
+      await setDoc(adminRoleRef, { isAdmin: true, createdAt: new Date() });
+
       toast({
-        title: 'Inicio de sesión exitoso',
-        description: 'Bienvenido de nuevo.',
+        title: 'Registro exitoso',
+        description: 'Tu cuenta de administrador ha sido creada.',
       });
       router.push('/admin');
     } catch (error: any) {
-      console.error('Error al iniciar sesión:', error);
+      console.error('Error en el registro:', error);
       toast({
         variant: 'destructive',
-        title: 'Error de inicio de sesión',
-        description: error.message || 'Credenciales incorrectas. Por favor, inténtelo de nuevo.',
+        title: 'Error de registro',
+        description: error.message || 'No se pudo crear la cuenta. Por favor, inténtelo de nuevo.',
       });
     } finally {
       setIsLoading(false);
@@ -77,10 +86,10 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="font-headline text-2xl text-primary">
-            Inicio de Sesión de Administrador
+            Registrar Administrador
           </CardTitle>
           <CardDescription>
-            Ingrese sus credenciales para acceder al panel de administración.
+            Cree una nueva cuenta de administrador para gestionar el sitio.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
@@ -120,12 +129,12 @@ export default function LoginPage() {
             <CardFooter className="flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                {isLoading ? 'Registrando...' : 'Crear Cuenta'}
               </Button>
-              <p className="text-sm text-muted-foreground">
-                ¿No tienes una cuenta?{' '}
-                <Link href="/register" className="font-medium text-primary hover:underline">
-                  Regístrate
+               <p className="text-sm text-muted-foreground">
+                ¿Ya tienes una cuenta?{' '}
+                <Link href="/login" className="font-medium text-primary hover:underline">
+                  Inicia sesión
                 </Link>
               </p>
             </CardFooter>
