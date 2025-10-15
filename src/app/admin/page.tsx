@@ -37,6 +37,7 @@ export default function AdminPage() {
   }, [firestore, user]);
 
   const { data: adminRole, isLoading: isLoadingRole } = useDoc(adminRoleRef);
+  
   const isUserAdmin = adminRole && adminRole.isAdmin;
 
   const appointmentsQuery = useMemoFirebase(() => {
