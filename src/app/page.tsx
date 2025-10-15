@@ -93,10 +93,10 @@ export default function Home() {
     if (contentData) {
       const { headline, bodyText, callToActionText } = contentData;
       setHeadline(headline || "Expertiză Juridică de Încredere pentru Provocări Moderne");
-      setBody(bodyText || "Argos Law oferă servicii juridice de prim rang, adaptate nevoilor dumneavoastră unice. Echipa noastră de avocați cu experiență este dedicată obținerii celor mai bune rezultate posibile pentru clienții noștri prin consiliere strategică și pledoarie neobosită.");
+      setBody(bodyText || "Avocat Law oferă servicii juridice de prim rang, adaptate nevoilor dumneavoastră unice. Echipa noastră de avocați cu experiență este dedicată obținerii celor mai bune rezultate posibile pentru clienții noștri prin consiliere strategică și pledoarie neobosită.");
       setCallToAction(callToActionText || "Programează o Consultație");
       setTempHeadline(headline || "Expertiză Juridică de Încredere pentru Provocări Moderne");
-      setTempBody(bodyText || "Argos Law oferă servicii juridice de prim rang, adaptate nevoilor dumneavoastră unice. Echipa noastră de avocați cu experiență este dedicată obținerii celor mai bune rezultate posibile pentru clienții noștri prin consiliere strategică și pledoarie neobosită.");
+      setTempBody(bodyText || "Avocat Law oferă servicii juridice de prim rang, adaptate nevoilor dumneavoastră unice. Echipa noastră de avocați cu experiență este dedicată obținerii celor mai bune rezultate posibile pentru clienții noștri prin consiliere strategică și pledoarie neobosită.");
       setTempCallToAction(callToActionText || "Programează o Consultație");
     }
   }, [contentData]);

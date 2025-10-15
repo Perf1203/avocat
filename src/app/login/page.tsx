@@ -97,7 +97,7 @@ export default function LoginPage() {
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="admin@argoslaw.com"
+                        placeholder="admin@avocatlaw.com"
                         {...field}
                       />
                     </FormControl>

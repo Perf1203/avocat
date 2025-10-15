@@ -68,7 +68,7 @@ export function Header() {
           <div className="md:hidden">
               <Link href="/">
                 <Scale className="h-8 w-8 text-primary" />
-                <span className="sr-only">Argos Law</span>
+                <span className="sr-only">Avocat Law</span>
               </Link>
           </div>
 

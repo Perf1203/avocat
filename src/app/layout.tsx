@@ -6,7 +6,7 @@ import { Footer } from "@/components/footer";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 export const metadata: Metadata = {
-  title: "Argos Law",
+  title: "Avocat Law",
   description: "Partenerul dumneavoastră juridic de încredere pentru provocări complexe.",
 };
 
