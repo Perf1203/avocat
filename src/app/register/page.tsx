@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { FirebaseError } from 'firebase/app';
 
 const registerSchema = z.object({
   email: z.string().email({ message: 'Por favor ingrese un correo válido.' }),
@@ -73,10 +74,14 @@ export default function RegisterPage() {
       router.push('/admin');
     } catch (error: any) {
       console.error('Error en el registro:', error);
+      let description = 'No se pudo crear la cuenta. Por favor, inténtelo de nuevo.';
+      if (error instanceof FirebaseError && error.code === 'auth/email-already-in-use') {
+        description = 'Este correo electrónico ya está en uso. Intente iniciar sesión.';
+      }
       toast({
         variant: 'destructive',
         title: 'Error de registro',
-        description: error.message || 'No se pudo crear la cuenta. Por favor, inténtelo de nuevo.',
+        description: description,
       });
     } finally {
       setIsLoading(false);
