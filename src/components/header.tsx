@@ -11,8 +11,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/schedule", label: "Schedule Appointment" },
+  { href: "/", label: "Acasă" },
+  { href: "/schedule", label: "Programează o consultație" },
   { href: "/admin", label: "Admin" },
 ];
 
@@ -51,7 +51,7 @@ export function Header() {
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
                   <Menu className="h-6 w-6" />
-                  <span className="sr-only">Toggle Menu</span>
+                  <span className="sr-only">Comută Meniul</span>
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="pr-0 pt-12">

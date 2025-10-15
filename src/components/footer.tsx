@@ -4,7 +4,7 @@ export function Footer() {
     <footer className="border-t bg-background">
       <div className="container flex h-16 items-center justify-center">
         <p className="text-sm text-muted-foreground">
-          © {currentYear} Argos Law. All rights reserved.
+          © {currentYear} Argos Law. Toate drepturile rezervate.
         </p>
       </div>
     </footer>

@@ -31,8 +31,8 @@ import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Por favor ingrese un correo válido.' }),
-  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
+  email: z.string().email({ message: 'Vă rugăm să introduceți un email valid.' }),
+  password: z.string().min(6, { message: 'Parola trebuie să aibă cel puțin 6 caractere.' }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -56,17 +56,17 @@ export default function LoginPage() {
     signInWithEmailAndPassword(auth, data.email, data.password)
       .then(() => {
         toast({
-          title: 'Inicio de sesión exitoso',
-          description: 'Bienvenido de nuevo.',
+          title: 'Autentificare reușită',
+          description: 'Bine ați revenit.',
         });
         router.push('/admin');
       })
       .catch((error: any) => {
-        console.error('Error al iniciar sesión:', error);
+        console.error('Eroare la autentificare:', error);
         toast({
           variant: 'destructive',
-          title: 'Error de inicio de sesión',
-          description: error.message || 'Credenciales incorrectas. Por favor, inténtelo de nuevo.',
+          title: 'Eroare de autentificare',
+          description: error.message || 'Date de identificare incorecte. Vă rugăm să încercați din nou.',
         });
       })
       .finally(() => {
@@ -79,10 +79,10 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="font-headline text-2xl text-primary">
-            Inicio de Sesión de Administrador
+            Autentificare Administrator
           </CardTitle>
           <CardDescription>
-            Ingrese sus credenciales para acceder al panel de administración.
+            Introduceți datele de autentificare pentru a accesa panoul de administrare.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
@@ -93,7 +93,7 @@ export default function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Correo Electrónico</FormLabel>
+                    <FormLabel>Adresă de Email</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
@@ -110,7 +110,7 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contraseña</FormLabel>
+                    <FormLabel>Parolă</FormLabel>
                     <FormControl>
                       <Input type="password" placeholder="********" {...field} />
                     </FormControl>
@@ -122,14 +122,8 @@ export default function LoginPage() {
             <CardFooter className="flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                {isLoading ? 'Autentificare...' : 'Autentificare'}
               </Button>
-              <p className="text-sm text-muted-foreground">
-                ¿No tienes una cuenta?{' '}
-                <Link href="/register" className="font-medium text-primary hover:underline">
-                  Regístrate
-                </Link>
-              </p>
             </CardFooter>
           </form>
         </Form>

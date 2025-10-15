@@ -108,16 +108,16 @@ export default function SchedulePage() {
       .then(() => {
         setIsConfirmed(true);
         toast({
-          title: "Cita Confirmada!",
-          description: `Su consulta está programada para el ${format(fullDateTime, "PPP 'a las' p")}.`,
+          title: "Programare Confirmată!",
+          description: `Consultația dvs. este programată pentru ${format(fullDateTime, "PPP 'la' p")}.`,
         });
       })
       .catch((error) => {
-        console.error("Error al agendar la cita:", error);
+        console.error("Eroare la programare:", error);
         toast({
           variant: "destructive",
-          title: "¡Oh, oh! Algo salió mal.",
-          description: "No se pudo agendar la cita. Por favor, inténtelo de nuevo.",
+          title: "Oh, nu! Ceva nu a funcționat.",
+          description: "Nu am putut programa consultația. Vă rugăm să încercați din nou.",
         });
       })
       .finally(() => {
@@ -139,9 +139,9 @@ export default function SchedulePage() {
       <div className="container py-24 sm:py-32">
         <Alert variant="default" className="max-w-2xl mx-auto border-green-500 bg-green-50 dark:bg-green-950">
           <CheckCircle className="h-4 w-4 text-green-500" />
-          <AlertTitle className="text-green-700 dark:text-green-400">¡Cita Confirmada!</AlertTitle>
+          <AlertTitle className="text-green-700 dark:text-green-400">Programare Confirmată!</AlertTitle>
           <AlertDescription>
-            Su consulta está agendada para el {format(fullDateTime, "PPP 'a las' p")}.
+            Consultația dvs. este programată pentru {format(fullDateTime, "PPP 'la' p")}.
           </AlertDescription>
         </Alert>
       </div>
@@ -152,10 +152,10 @@ export default function SchedulePage() {
     <div className="container py-24 sm:py-32">
       <div className="text-center max-w-2xl mx-auto">
         <h1 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl">
-          Agendar una Consulta
+          Programează o Consultație
         </h1>
         <p className="mt-4 text-lg leading-8 text-foreground/80">
-          Elija una fecha y hora que le convenga. Esperamos poder hablar con usted.
+          Alegeți o dată și o oră convenabilă pentru dvs. Așteptăm cu nerăbdare să discutăm.
         </p>
       </div>
 
@@ -164,7 +164,7 @@ export default function SchedulePage() {
           <CardHeader>
              <CardTitle className="flex items-center gap-2 text-primary font-headline">
                <CalendarIcon className="h-5 w-5" />
-               1. Seleccione una Fecha
+               1. Selectați o Dată
              </CardTitle>
           </CardHeader>
           <CardContent className="flex justify-center items-center flex-grow">
@@ -185,9 +185,9 @@ export default function SchedulePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary font-headline">
               <Clock className="h-5 w-5" />
-              2. Seleccione una Hora
+              2. Selectați o Oră
             </CardTitle>
-            <p className="text-sm text-muted-foreground pt-1">{date ? format(date, 'EEEE, d \'de\' MMMM') : 'Por favor seleccione un día'}</p>
+            <p className="text-sm text-muted-foreground pt-1">{date ? format(date, 'EEEE, d MMMM') : 'Vă rugăm selectați o zi'}</p>
           </CardHeader>
           <CardContent>
              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -217,9 +217,9 @@ export default function SchedulePage() {
         <div className="max-w-3xl mx-auto mt-12">
             <Card>
                 <CardHeader>
-                    <CardTitle className="font-headline text-primary">3. Su Información</CardTitle>
+                    <CardTitle className="font-headline text-primary">3. Informațiile Dvs.</CardTitle>
                     <p className="text-sm text-muted-foreground pt-1">
-                        Para su cita el {format(date, 'PPP')} a las {selectedTime}.
+                        Pentru programarea dvs. din {format(date, 'PPP')} la ora {selectedTime}.
                     </p>
                 </CardHeader>
                 <CardContent>
@@ -230,9 +230,9 @@ export default function SchedulePage() {
                         name="name"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Nombre Completo</FormLabel>
+                            <FormLabel>Nume Complet</FormLabel>
                             <FormControl>
-                                <Input placeholder="John Doe" {...field} />
+                                <Input placeholder="Ion Popescu" {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -244,9 +244,9 @@ export default function SchedulePage() {
                             name="email"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Correo Electrónico</FormLabel>
+                                <FormLabel>Adresă de Email</FormLabel>
                                 <FormControl>
-                                <Input placeholder="john.doe@example.com" {...field} />
+                                <Input placeholder="ion.popescu@exemplu.com" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -257,9 +257,9 @@ export default function SchedulePage() {
                             name="phone"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Número de Teléfono</FormLabel>
+                                <FormLabel>Număr de Telefon</FormLabel>
                                 <FormControl>
-                                <Input placeholder="(555) 123-4567" {...field} />
+                                <Input placeholder="(+40) 712 345 678" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -271,10 +271,10 @@ export default function SchedulePage() {
                         name="issue"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Describa brevemente su asunto legal</FormLabel>
+                            <FormLabel>Descrieți pe scurt problema dvs. juridică</FormLabel>
                             <FormControl>
                                 <Textarea
-                                placeholder="Cuéntenos un poco sobre por qué nos contacta..."
+                                placeholder="Spuneți-ne puțin despre motivul pentru care ne contactați..."
                                 {...field}
                                 />
                             </FormControl>
@@ -283,7 +283,7 @@ export default function SchedulePage() {
                         )}
                         />
                         <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
-                          {isLoading ? 'Agendando...' : 'Agendar Cita'}
+                          {isLoading ? 'Se programează...' : 'Programează Consultația'}
                         </Button>
                     </form>
                     </Form>

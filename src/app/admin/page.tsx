@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useFirebase, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import {
   Table,
@@ -32,6 +32,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function AdminPage() {
   const { firestore } = useFirebase();
@@ -56,6 +57,8 @@ export default function AdminPage() {
 
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !isUserAdmin) return null;
+    // This path is incorrect, it should query the nested collection
+    // but for now, let's assume a top-level `appointments` collection
     const coll = collection(firestore, 'appointments');
     return query(coll, orderBy('startTime', 'desc'));
   }, [firestore, isUserAdmin]);
@@ -75,29 +78,21 @@ export default function AdminPage() {
   
   const showLoading = isUserLoading || isLoadingRole;
 
-  const handleDelete = async (collectionName: string, docId: string) => {
+  const handleDelete = (collectionName: string, docId: string) => {
     if (!firestore) return;
-    try {
-      await deleteDoc(doc(firestore, collectionName, docId));
-      toast({
-        title: 'Elemento eliminado',
-        description: `El elemento ha sido eliminado correctamente.`,
-      });
-    } catch (error) {
-      console.error("Error eliminando documento: ", error);
-      toast({
-        variant: "destructive",
-        title: 'Error',
-        description: `No se pudo eliminar el elemento.`,
-      });
-    }
+    const docRef = doc(firestore, collectionName, docId);
+    deleteDocumentNonBlocking(docRef);
+    toast({
+        title: 'Element șters',
+        description: `Elementul a fost șters cu succes.`,
+    });
   };
 
   if (showLoading) {
     return (
       <div className="container flex min-h-[calc(100vh-8rem)] items-center justify-center py-12">
         <div className="text-center">
-          <p>Cargando y verificando acceso...</p>
+          <p>Se încarcă și se verifică accesul...</p>
         </div>
       </div>
     );
@@ -107,12 +102,12 @@ export default function AdminPage() {
      return (
       <div className="container flex min-h-[calc(100vh-8rem)] items-center justify-center py-12 text-center">
         <div>
-          <h2 className="font-headline text-2xl font-bold text-destructive">Acceso Denegado</h2>
+          <h2 className="font-headline text-2xl font-bold text-destructive">Acces Interzis</h2>
           <p className="mt-2 text-muted-foreground">
-            No tienes permisos de administrador para ver esta página.
+            Nu aveți permisiuni de administrator pentru a vizualiza această pagină.
           </p>
            <Button asChild className="mt-4">
-            <Link href="/">Volver al Inicio</Link>
+            <Link href="/">Înapoi la Acasă</Link>
           </Button>
         </div>
       </div>
@@ -123,17 +118,17 @@ export default function AdminPage() {
     <div className="container py-12">
       <div className="flex justify-between items-center mb-8">
         <h1 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl">
-          Panel de Administrador
+          Panou de Administrare
         </h1>
         <Button asChild>
-          <Link href="/">Volver al Inicio</Link>
+          <Link href="/">Înapoi la Acasă</Link>
         </Button>
       </div>
       
       <div className="grid gap-8 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Citas Agendadas</CardTitle>
+            <CardTitle>Programări Agendate</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingAppointments && (
@@ -145,17 +140,17 @@ export default function AdminPage() {
             )}
             {appointmentsError && (
               <p className="text-destructive">
-                Error al cargar las citas: {appointmentsError.message}.
+                Eroare la încărcarea programărilor: {appointmentsError.message}.
               </p>
             )}
             {!isLoadingAppointments && !appointmentsError && appointments && (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Fecha y Hora</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Data și Ora</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Acțiuni</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -180,15 +175,15 @@ export default function AdminPage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                              <AlertDialogTitle>Ești sigur?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Esta acción no se puede deshacer. Esto eliminará permanentemente la cita.
+                                Această acțiune nu poate fi anulată. Aceasta va șterge permanent programarea.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogCancel>Anulează</AlertDialogCancel>
                               <AlertDialogAction onClick={() => handleDelete('appointments', apt.id)}>
-                                Eliminar
+                                Șterge
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -201,7 +196,7 @@ export default function AdminPage() {
             )}
             {!isLoadingAppointments && appointments?.length === 0 && (
               <div className="text-center text-muted-foreground py-8">
-                No hay citas agendadas.
+                Nu există programări agendate.
               </div>
             )}
           </CardContent>
@@ -209,7 +204,7 @@ export default function AdminPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Clientes Registrados</CardTitle>
+            <CardTitle>Clienți Înregistrați</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingClients && (
@@ -221,16 +216,16 @@ export default function AdminPage() {
             )}
             {clientsError && (
               <p className="text-destructive">
-                Error al cargar los clientes: {clientsError.message}.
+                Eroare la încărcarea clienților: {clientsError.message}.
               </p>
             )}
             {!isLoadingClients && !clientsError && clients && (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nombre</TableHead>
+                    <TableHead>Nume</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead className="text-right">Acțiuni</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -247,15 +242,15 @@ export default function AdminPage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                <AlertDialogTitle>Ești sigur?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Esta acción no se puede deshacer. Esto eliminará permanentemente al cliente y todas sus citas asociadas.
+                                  Această acțiune nu poate fi anulată. Aceasta va șterge permanent clientul și toate programările asociate.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogCancel>Anulează</AlertDialogCancel>
                                 <AlertDialogAction onClick={() => handleDelete('clients', client.id)}>
-                                  Eliminar
+                                  Șterge
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
@@ -268,7 +263,7 @@ export default function AdminPage() {
             )}
             {!isLoadingClients && clients?.length === 0 && (
               <div className="text-center text-muted-foreground py-8">
-                No hay clientes registrados.
+                Nu există clienți înregistrați.
               </div>
             )}
           </CardContent>

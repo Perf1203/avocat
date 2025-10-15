@@ -13,7 +13,7 @@ import {
   Scale
 } from "lucide-react";
 import Link from "next/link";
-import { doc, getDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
@@ -28,30 +28,31 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ContentSuggestionTool } from "@/components/content-suggestion-tool";
-import { useFirebase, useUser } from "@/firebase/provider";
+import { useFirebase, useUser, useDoc, useMemoFirebase } from "@/firebase";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const heroImage = PlaceHolderImages.find((img) => img.id === "hero-image");
 
 const practiceAreas = [
   {
     icon: <Gavel className="h-10 w-10 text-primary" />,
-    title: "Corporate Law",
+    title: "Drept Corporativ",
     description:
-      "Expert guidance on mergers, acquisitions, and corporate governance to protect and grow your business.",
+      "Consultanță de specialitate privind fuziuni, achiziții și guvernanță corporativă pentru a vă proteja și dezvolta afacerea.",
   },
   {
     icon: <Landmark className="h-10 w-10 text-primary" />,
-    title: "Real Estate Law",
+    title: "Drept Imobiliar",
     description:
-      "Navigating complex real estate transactions, from commercial leases to property acquisitions.",
+      "Navigarea tranzacțiilor imobiliare complexe, de la închirieri comerciale la achiziții de proprietăți.",
   },
   {
     icon: <BookOpen className="h-10 w-10 text-primary" />,
-    title: "Intellectual Property",
+    title: "Proprietate Intelectuală",
     description:
-      "Protecting your innovations and creative works with robust patent, trademark, and copyright strategies.",
+      "Protejarea inovațiilor și creațiilor dvs. cu strategii solide de brevetare, mărci comerciale și drepturi de autor.",
   },
 ];
 
@@ -60,83 +61,74 @@ export default function Home() {
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
-  const [headline, setHeadline] = useState("Trusted Legal Expertise for Modern Challenges");
-  const [body, setBody] = useState("Argos Law provides premier legal services tailored to your unique needs. Our team of experienced attorneys is dedicated to achieving the best possible outcomes for our clients through strategic counsel and relentless advocacy.");
-  const [callToAction, setCallToAction] = useState("Schedule a Consultation");
-  const [pricePerHour, setPricePerHour] = useState(250);
-  const [flatRate, setFlatRate] = useState(1000);
-  const [isDataLoading, setIsDataLoading] = useState(true);
+  const adminRoleRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'roles_admin', user.uid);
+  }, [firestore, user]);
+  const { data: adminRole, isLoading: isLoadingRole } = useDoc(adminRoleRef);
+  const isUserAdmin = adminRole?.isAdmin === true;
+
+  const contentRef = useMemoFirebase(() => firestore ? doc(firestore, "landing_page_content", "main") : null, [firestore]);
+  const priceRef = useMemoFirebase(() => firestore ? doc(firestore, "consultation_prices", "default") : null, [firestore]);
+
+  const { data: contentData, isLoading: isContentLoading } = useDoc(contentRef);
+  const { data: priceData, isLoading: isPriceLoading } = useDoc(priceRef);
+
+  const [headline, setHeadline] = useState("");
+  const [body, setBody] = useState("");
+  const [callToAction, setCallToAction] = useState("");
+  const [pricePerHour, setPricePerHour] = useState(0);
+  const [flatRate, setFlatRate] = useState(0);
 
   const [isEditing, setIsEditing] = useState(false);
   const [showSuggestionTool, setShowSuggestionTool] = useState(false);
 
-  const [tempHeadline, setTempHeadline] = useState(headline);
-  const [tempBody, setTempBody] = useState(body);
-  const [tempCallToAction, setTempCallToAction] = useState(callToAction);
-  const [tempPricePerHour, setTempPricePerHour] = useState(pricePerHour);
-  const [tempFlatRate, setTempFlatRate] = useState(flatRate);
+  const [tempHeadline, setTempHeadline] = useState("");
+  const [tempBody, setTempBody] = useState("");
+  const [tempCallToAction, setTempCallToAction] = useState("");
+  const [tempPricePerHour, setTempPricePerHour] = useState(0);
+  const [tempFlatRate, setTempFlatRate] = useState(0);
+  
+  useEffect(() => {
+    if (contentData) {
+      const { headline, bodyText, callToActionText } = contentData;
+      setHeadline(headline || "Expertiză Juridică de Încredere pentru Provocări Moderne");
+      setBody(bodyText || "Argos Law oferă servicii juridice de prim rang, adaptate nevoilor dumneavoastră unice. Echipa noastră de avocați cu experiență este dedicată obținerii celor mai bune rezultate posibile pentru clienții noștri prin consiliere strategică și pledoarie neobosită.");
+      setCallToAction(callToActionText || "Programează o Consultație");
+      setTempHeadline(headline || "Expertiză Juridică de Încredere pentru Provocări Moderne");
+      setTempBody(bodyText || "Argos Law oferă servicii juridice de prim rang, adaptate nevoilor dumneavoastră unice. Echipa noastră de avocați cu experiență este dedicată obținerii celor mai bune rezultate posibile pentru clienții noștri prin consiliere strategică și pledoarie neobosită.");
+      setTempCallToAction(callToActionText || "Programează o Consultație");
+    }
+  }, [contentData]);
 
   useEffect(() => {
-    if (firestore) {
-      const contentRef = doc(firestore, "landing_page_content", "main");
-      const priceRef = doc(firestore, "consultation_prices", "default");
-
-      const fetchData = async () => {
-        setIsDataLoading(true);
-        try {
-          const [contentSnap, priceSnap] = await Promise.all([
-            getDoc(contentRef),
-            getDoc(priceRef),
-          ]);
-
-          if (contentSnap.exists()) {
-            const data = contentSnap.data();
-            setHeadline(data.headline || headline);
-            setBody(data.bodyText || body);
-            setCallToAction(data.callToActionText || callToAction);
-            setTempHeadline(data.headline || headline);
-            setTempBody(data.bodyText || body);
-            setTempCallToAction(data.callToActionText || callToAction);
-          }
-
-          if (priceSnap.exists()) {
-            const data = priceSnap.data();
-            setPricePerHour(data.pricePerHour || pricePerHour);
-            setFlatRate(data.flatRate || flatRate);
-            setTempPricePerHour(data.pricePerHour || pricePerHour);
-            setTempFlatRate(data.flatRate || flatRate);
-          }
-        } catch (error) {
-          console.error("Error fetching page content:", error);
-        } finally {
-          setIsDataLoading(false);
-        }
-      };
-      fetchData();
+    if (priceData) {
+      const { pricePerHour, flatRate } = priceData;
+      setPricePerHour(pricePerHour || 250);
+      setFlatRate(flatRate || 1000);
+      setTempPricePerHour(pricePerHour || 250);
+      setTempFlatRate(flatRate || 1000);
     }
-  }, [firestore]);
+  }, [priceData]);
 
 
   const handleSaveChanges = () => {
-    if (!firestore) return;
+    if (!firestore || !contentRef || !priceRef) return;
     
-    const contentRef = doc(firestore, "landing_page_content", "main");
-    const priceRef = doc(firestore, "consultation_prices", "default");
-
-    const contentData = {
+    const newContentData = {
       headline: tempHeadline,
       bodyText: tempBody,
       callToActionText: tempCallToAction,
       sectionName: "Hero"
     };
 
-    const priceData = {
+    const newPriceData = {
       pricePerHour: tempPricePerHour,
       flatRate: tempFlatRate,
     };
     
-    setDocumentNonBlocking(contentRef, contentData, { merge: true });
-    setDocumentNonBlocking(priceRef, priceData, { merge: true });
+    setDocumentNonBlocking(contentRef, newContentData, { merge: true });
+    setDocumentNonBlocking(priceRef, newPriceData, { merge: true });
 
     setHeadline(tempHeadline);
     setBody(tempBody);
@@ -146,8 +138,8 @@ export default function Home() {
     setIsEditing(false);
     
     toast({
-      title: "Success",
-      description: "Landing page content has been updated.",
+      title: "Succes",
+      description: "Conținutul paginii de start a fost actualizat.",
     });
   };
 
@@ -169,6 +161,8 @@ export default function Home() {
     if (suggestion.suggestedBodyText) setTempBody(suggestion.suggestedBodyText);
     if (suggestion.suggestedCallToAction) setTempCallToAction(suggestion.suggestedCallToAction);
   };
+  
+  const isLoading = isContentLoading || isPriceLoading || isLoadingRole;
 
   return (
     <>
@@ -189,17 +183,28 @@ export default function Home() {
 
           <div className="relative container h-full flex flex-col justify-end pb-12 text-left">
             <div className="max-w-2xl">
-              <h1 className="font-headline text-4xl font-bold tracking-tight text-primary sm:text-6xl">
-                {headline}
-              </h1>
-              <p className="mt-6 text-lg leading-8 text-foreground/80">
-                {body}
-              </p>
-              <div className="mt-10">
-                <Button asChild size="lg">
-                  <Link href="/schedule">{callToAction}</Link>
-                </Button>
-              </div>
+              {isLoading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-16 w-3/4" />
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-5/6" />
+                  <Skeleton className="h-12 w-48 mt-4" />
+                </div>
+              ) : (
+                <>
+                  <h1 className="font-headline text-4xl font-bold tracking-tight text-primary sm:text-6xl">
+                    {headline}
+                  </h1>
+                  <p className="mt-6 text-lg leading-8 text-foreground/80">
+                    {body}
+                  </p>
+                  <div className="mt-10">
+                    <Button asChild size="lg">
+                      <Link href="/schedule">{callToAction}</Link>
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </section>
@@ -208,10 +213,10 @@ export default function Home() {
           <div className="container">
             <div className="text-center max-w-2xl mx-auto">
               <h2 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl">
-                Our Practice Areas
+                Domeniile noastre de practică
               </h2>
               <p className="mt-4 text-lg leading-8 text-foreground/80">
-                Delivering exceptional results across a wide range of legal fields.
+                Oferim rezultate excepționale într-o gamă largă de domenii juridice.
               </p>
             </div>
             <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
@@ -236,10 +241,10 @@ export default function Home() {
           <div className="container">
             <div className="text-center max-w-2xl mx-auto">
               <h2 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl">
-                Precios de Consulta
+                Prețuri Consultanță
               </h2>
               <p className="mt-4 text-lg leading-8 text-foreground/80">
-                Planes transparentes y flexibles que se adaptan a sus necesidades.
+                Planuri transparente și flexibile pentru a se potrivi nevoilor dumneavoastră.
               </p>
             </div>
             <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 max-w-2xl mx-auto">
@@ -247,46 +252,54 @@ export default function Home() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <DollarSign />
-                    Por Hora
+                    Orar
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-4xl font-bold">${pricePerHour}</p>
-                  <p className="text-muted-foreground">Ideal para consultas específicas y asesoramiento continuo.</p>
+                  {isLoading ? (
+                     <Skeleton className="h-10 w-24" />
+                  ) : (
+                    <p className="text-4xl font-bold">${pricePerHour}</p>
+                  )}
+                  <p className="text-muted-foreground">Ideal pentru întrebări specifice și consiliere continuă.</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Scale />
-                    Tarifa Plana
+                    Forfetar
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-4xl font-bold">${flatRate}</p>
-                  <p className="text-muted-foreground">Perfecto para proyectos definidos y presupuestos predecibles.</p>
+                   {isLoading ? (
+                     <Skeleton className="h-10 w-24" />
+                  ) : (
+                    <p className="text-4xl font-bold">${flatRate}</p>
+                  )}
+                  <p className="text-muted-foreground">Perfect pentru proiecte definite și bugete previzibile.</p>
                 </CardContent>
               </Card>
             </div>
           </div>
         </section>
 
-        {user && isEditing && (
+        {isUserAdmin && isEditing && (
           <div className="fixed bottom-4 right-4 left-4 z-50">
             <Card className="max-w-4xl mx-auto p-6 shadow-2xl">
               <div className="flex justify-between items-center mb-4">
                  <h3 className="font-headline text-xl font-bold text-primary flex items-center gap-2">
                   <PenSquare className="w-6 h-6"/>
-                  Editing Landing Page
+                  Editare Pagină Principală
                 </h3>
                 <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)}>
-                  <span className="sr-only">Close</span>
+                  <span className="sr-only">Închide</span>
                 </Button>
               </div>
              
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="headline">Headline</Label>
+                  <Label htmlFor="headline">Titlu</Label>
                   <Input
                     id="headline"
                     value={tempHeadline}
@@ -294,7 +307,7 @@ export default function Home() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="body">Body Text</Label>
+                  <Label htmlFor="body">Text Principal</Label>
                   <Textarea
                     id="body"
                     value={tempBody}
@@ -303,7 +316,7 @@ export default function Home() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="cta">Call to Action Button</Label>
+                  <Label htmlFor="cta">Buton de Acțiune</Label>
                   <Input
                     id="cta"
                     value={tempCallToAction}
@@ -312,7 +325,7 @@ export default function Home() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="price-per-hour">Precio Por Hora</Label>
+                    <Label htmlFor="price-per-hour">Preț pe Oră</Label>
                     <Input
                       id="price-per-hour"
                       type="number"
@@ -321,7 +334,7 @@ export default function Home() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="flat-rate">Tarifa Plana</Label>
+                    <Label htmlFor="flat-rate">Tarif Fix</Label>
                     <Input
                       id="flat-rate"
                       type="number"
@@ -332,23 +345,23 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex justify-end gap-2 mt-6">
-                <Button variant="outline" onClick={handleCancelChanges}>Cancel</Button>
+                <Button variant="outline" onClick={handleCancelChanges}>Anulează</Button>
                 <Button variant="secondary" onClick={() => setShowSuggestionTool(true)}>
-                  <Wand2 className="mr-2 h-4 w-4" /> Suggest with AI
+                  <Wand2 className="mr-2 h-4 w-4" /> Sugerează cu AI
                 </Button>
-                <Button onClick={handleSaveChanges}>Save Changes</Button>
+                <Button onClick={handleSaveChanges}>Salvează Modificările</Button>
               </div>
             </Card>
           </div>
         )}
 
-        { user && (
+        { !isUserLoading && isUserAdmin && (
           <div className="fixed bottom-6 right-6 z-40">
             <Card className="p-3">
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-5 h-5 text-primary" />
                 <Label htmlFor="edit-mode" className="font-medium">
-                  Admin Mode
+                  Mod Admin
                 </Label>
                 <Switch
                   id="edit-mode"

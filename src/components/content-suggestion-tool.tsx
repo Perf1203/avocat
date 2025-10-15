@@ -73,7 +73,7 @@ export function ContentSuggestionTool({
       });
       setSuggestions(result);
     } catch (error) {
-      console.error("Failed to generate content:", error);
+      console.error("Nu s-a putut genera conținut:", error);
     } finally {
       setIsLoading(false);
     }
@@ -95,11 +95,11 @@ export function ContentSuggestionTool({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-headline text-primary">
-            <Wand2 /> AI Content Suggestions
+            <Wand2 /> Sugestii de Conținut AI
           </DialogTitle>
           <DialogDescription>
-            Provide some context, and our AI will suggest new content for your
-            landing page.
+            Oferiți un context, iar AI-ul nostru va sugera conținut nou pentru
+            pagina dvs. de start.
           </DialogDescription>
         </DialogHeader>
 
@@ -111,10 +111,10 @@ export function ContentSuggestionTool({
                 name="legalTrends"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Current Legal Trends</FormLabel>
+                    <FormLabel>Tendințe Juridice Actuale</FormLabel>
                     <FormControl>
                         <Textarea
-                        placeholder="e.g., 'Increased focus on data privacy laws', 'Rise of remote work agreements'"
+                        placeholder="ex: 'Accent sporit pe legile privind confidențialitatea datelor', 'Creșterea acordurilor de muncă la distanță'"
                         {...field}
                         />
                     </FormControl>
@@ -127,10 +127,10 @@ export function ContentSuggestionTool({
                 name="clientFeedback"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Recent Client Feedback</FormLabel>
+                    <FormLabel>Feedback Recent de la Clienți</FormLabel>
                     <FormControl>
                         <Textarea
-                        placeholder="e.g., 'Clients are asking for more transparent pricing', 'Difficulty understanding complex legal terms'"
+                        placeholder="ex: 'Clienții cer prețuri mai transparente', 'Dificultăți în înțelegerea termenilor juridici complecși'"
                         {...field}
                         />
                     </FormControl>
@@ -139,7 +139,7 @@ export function ContentSuggestionTool({
                 )}
                 />
                 <DialogFooter>
-                    <Button type="submit">Generate Suggestions</Button>
+                    <Button type="submit">Generează Sugestii</Button>
                 </DialogFooter>
             </form>
             </Form>
@@ -148,18 +148,18 @@ export function ContentSuggestionTool({
         {isLoading && (
           <div className="flex flex-col items-center justify-center gap-4 py-16">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-muted-foreground">Generating ideas...</p>
+            <p className="text-muted-foreground">Se generează idei...</p>
           </div>
         )}
 
         {suggestions && (
           <div className="space-y-4 pt-4">
-            <SuggestionCard title="Suggested Headline" content={suggestions.suggestedHeadline} onApply={() => handleApply({ suggestedHeadline: suggestions.suggestedHeadline })} />
-            <SuggestionCard title="Suggested Body Text" content={suggestions.suggestedBodyText} onApply={() => handleApply({ suggestedBodyText: suggestions.suggestedBodyText })} />
-            <SuggestionCard title="Suggested Call to Action" content={suggestions.suggestedCallToAction} onApply={() => handleApply({ suggestedCallToAction: suggestions.suggestedCallToAction })}/>
+            <SuggestionCard title="Titlu Sugerat" content={suggestions.suggestedHeadline} onApply={() => handleApply({ suggestedHeadline: suggestions.suggestedHeadline })} />
+            <SuggestionCard title="Text Principal Sugerat" content={suggestions.suggestedBodyText} onApply={() => handleApply({ suggestedBodyText: suggestions.suggestedBodyText })} />
+            <SuggestionCard title="Buton de Acțiune Sugerat" content={suggestions.suggestedCallToAction} onApply={() => handleApply({ suggestedCallToAction: suggestions.suggestedCallToAction })}/>
             <DialogFooter className="pt-4">
-                <Button variant="secondary" onClick={() => setSuggestions(null)}>Try Again</Button>
-                <Button onClick={handleClose}>Close</Button>
+                <Button variant="secondary" onClick={() => setSuggestions(null)}>Încearcă Din Nou</Button>
+                <Button onClick={handleClose}>Închide</Button>
             </DialogFooter>
           </div>
         )}
@@ -174,7 +174,7 @@ function SuggestionCard({ title, content, onApply }: { title: string, content: s
         <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Button size="sm" variant="outline" onClick={onApply}>Apply</Button>
+                <Button size="sm" variant="outline" onClick={onApply}>Aplică</Button>
             </CardHeader>
             <CardContent>
                 <p className="text-base text-foreground">{content}</p>
