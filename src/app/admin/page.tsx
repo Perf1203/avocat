@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemoFirebase, useFirebase } from '@/firebase/provider';
+import { useMemo } from 'react';
+import { useFirebase, useUser } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -15,17 +16,18 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useMemoFirebase } from '@/firebase/provider';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 export default function AdminPage() {
   const { firestore } = useFirebase();
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
 
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // The collection path is now `/clients/{clientId}/appointments/{appointmentId}`
-    // but for an admin view, we need a root-level collection. The previous implementation
-    // was writing to a root `appointments` collection. Let's assume that's what we want to read from.
-    // If the data model was strictly enforced, we'd need a collectionGroup query here.
-    // For simplicity, we'll query the root `appointments` collection which schedule/page.tsx writes to.
     return query(
       collection(firestore, 'appointments'),
       orderBy('startTime', 'desc')
@@ -38,11 +40,30 @@ export default function AdminPage() {
     error,
   } = useCollection(appointmentsQuery);
 
+  if (isUserLoading) {
+    return (
+      <div className="container py-12 text-center">
+        <p>Cargando...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
+
+
   return (
     <div className="container py-12">
-      <h1 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl mb-8">
-        Panel de Administrador
-      </h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+          Panel de Administrador
+        </h1>
+        <Button asChild>
+          <Link href="/">Volver al Inicio</Link>
+        </Button>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Citas Agendadas</CardTitle>
@@ -57,7 +78,7 @@ export default function AdminPage() {
           )}
           {error && (
             <p className="text-destructive">
-              Error al cargar las citas: {error.message}
+              Error al cargar las citas: {error.message}. Es posible que no tengas permisos de administrador.
             </p>
           )}
           {!isLoading && !error && appointments && (

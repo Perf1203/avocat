@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   BookOpen,
@@ -13,6 +13,7 @@ import {
   Scale
 } from "lucide-react";
 import Link from "next/link";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ContentSuggestionTool } from "@/components/content-suggestion-tool";
+import { useFirebase, useUser } from "@/firebase/provider";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useToast } from "@/hooks/use-toast";
 
 const heroImage = PlaceHolderImages.find((img) => img.id === "hero-image");
 
@@ -52,16 +56,16 @@ const practiceAreas = [
 ];
 
 export default function Home() {
-  const [headline, setHeadline] = useState(
-    "Trusted Legal Expertise for Modern Challenges"
-  );
-  const [body, setBody] = useState(
-    "Argos Law provides premier legal services tailored to your unique needs. Our team of experienced attorneys is dedicated to achieving the best possible outcomes for our clients through strategic counsel and relentless advocacy."
-  );
-  const [callToAction, setCallToAction] = useState("Schedule a Consultation");
+  const { firestore } = useFirebase();
+  const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
 
+  const [headline, setHeadline] = useState("Trusted Legal Expertise for Modern Challenges");
+  const [body, setBody] = useState("Argos Law provides premier legal services tailored to your unique needs. Our team of experienced attorneys is dedicated to achieving the best possible outcomes for our clients through strategic counsel and relentless advocacy.");
+  const [callToAction, setCallToAction] = useState("Schedule a Consultation");
   const [pricePerHour, setPricePerHour] = useState(250);
   const [flatRate, setFlatRate] = useState(1000);
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   const [isEditing, setIsEditing] = useState(false);
   const [showSuggestionTool, setShowSuggestionTool] = useState(false);
@@ -72,13 +76,79 @@ export default function Home() {
   const [tempPricePerHour, setTempPricePerHour] = useState(pricePerHour);
   const [tempFlatRate, setTempFlatRate] = useState(flatRate);
 
+  useEffect(() => {
+    if (firestore) {
+      const contentRef = doc(firestore, "landing_page_content", "main");
+      const priceRef = doc(firestore, "consultation_prices", "default");
+
+      const fetchData = async () => {
+        setIsDataLoading(true);
+        try {
+          const [contentSnap, priceSnap] = await Promise.all([
+            getDoc(contentRef),
+            getDoc(priceRef),
+          ]);
+
+          if (contentSnap.exists()) {
+            const data = contentSnap.data();
+            setHeadline(data.headline || headline);
+            setBody(data.bodyText || body);
+            setCallToAction(data.callToActionText || callToAction);
+            setTempHeadline(data.headline || headline);
+            setTempBody(data.bodyText || body);
+            setTempCallToAction(data.callToActionText || callToAction);
+          }
+
+          if (priceSnap.exists()) {
+            const data = priceSnap.data();
+            setPricePerHour(data.pricePerHour || pricePerHour);
+            setFlatRate(data.flatRate || flatRate);
+            setTempPricePerHour(data.pricePerHour || pricePerHour);
+            setTempFlatRate(data.flatRate || flatRate);
+          }
+        } catch (error) {
+          console.error("Error fetching page content:", error);
+        } finally {
+          setIsDataLoading(false);
+        }
+      };
+      fetchData();
+    }
+  }, [firestore]);
+
+
   const handleSaveChanges = () => {
+    if (!firestore) return;
+    
+    const contentRef = doc(firestore, "landing_page_content", "main");
+    const priceRef = doc(firestore, "consultation_prices", "default");
+
+    const contentData = {
+      headline: tempHeadline,
+      bodyText: tempBody,
+      callToActionText: tempCallToAction,
+      sectionName: "Hero"
+    };
+
+    const priceData = {
+      pricePerHour: tempPricePerHour,
+      flatRate: tempFlatRate,
+    };
+    
+    updateDocumentNonBlocking(contentRef, contentData);
+    updateDocumentNonBlocking(priceRef, priceData);
+
     setHeadline(tempHeadline);
     setBody(tempBody);
     setCallToAction(tempCallToAction);
     setPricePerHour(tempPricePerHour);
     setFlatRate(tempFlatRate);
     setIsEditing(false);
+    
+    toast({
+      title: "Success",
+      description: "Landing page content has been updated.",
+    });
   };
 
   const handleCancelChanges = () => {
@@ -201,7 +271,7 @@ export default function Home() {
           </div>
         </section>
 
-        {isEditing && (
+        {user && isEditing && (
           <div className="fixed bottom-4 right-4 left-4 z-50">
             <Card className="max-w-4xl mx-auto p-6 shadow-2xl">
               <div className="flex justify-between items-center mb-4">
@@ -272,21 +342,23 @@ export default function Home() {
           </div>
         )}
 
-        <div className="fixed bottom-6 right-6 z-40">
-          <Card className="p-3">
-            <div className="flex items-center space-x-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              <Label htmlFor="edit-mode" className="font-medium">
-                Admin Mode
-              </Label>
-              <Switch
-                id="edit-mode"
-                checked={isEditing}
-                onCheckedChange={setIsEditing}
-              />
-            </div>
-          </Card>
-        </div>
+        { user && (
+          <div className="fixed bottom-6 right-6 z-40">
+            <Card className="p-3">
+              <div className="flex items-center space-x-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <Label htmlFor="edit-mode" className="font-medium">
+                  Admin Mode
+                </Label>
+                <Switch
+                  id="edit-mode"
+                  checked={isEditing}
+                  onCheckedChange={setIsEditing}
+                />
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
       <ContentSuggestionTool
         open={showSuggestionTool}
