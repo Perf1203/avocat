@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { isPast, isToday } from "date-fns";
+import { isPast, isToday, startOfDay, endOfDay } from "date-fns";
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Clock, CheckCircle } from "lucide-react";
-import { collection, Timestamp } from "firebase/firestore";
+import { collection, Timestamp, query, where } from "firebase/firestore";
 
 
 import { AppointmentSchema } from "@/lib/schemas";
@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useFirebase } from "@/firebase/provider";
+import { useFirebase, useCollection, useMemoFirebase } from "@/firebase";
 import { addDocumentNonBlocking } from "@/firebase";
 
 type AppointmentFormData = z.infer<typeof AppointmentSchema>;
@@ -44,6 +44,26 @@ export default function SchedulePage() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const appointmentsQuery = useMemoFirebase(() => {
+    if (!firestore || !date) return null;
+    const start = startOfDay(date);
+    const end = endOfDay(date);
+    return query(
+      collection(firestore, 'appointments'),
+      where('startTime', '>=', Timestamp.fromDate(start)),
+      where('startTime', '<=', Timestamp.fromDate(end))
+    );
+  }, [firestore, date]);
+
+  const { data: appointmentsOnSelectedDate } = useCollection(appointmentsQuery);
+
+  const bookedTimes = useMemo(() => {
+    if (!appointmentsOnSelectedDate) return new Set();
+    return new Set(
+      appointmentsOnSelectedDate.map(apt => format((apt as any).startTime.toDate(), 'HH:mm'))
+    );
+  }, [appointmentsOnSelectedDate]);
 
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(AppointmentSchema),
@@ -71,7 +91,19 @@ export default function SchedulePage() {
       createdAt: Timestamp.now(),
     };
     
+    // Create client as well
+    const clientData = {
+      firstName: data.name.split(' ')[0],
+      lastName: data.name.split(' ').slice(1).join(' '),
+      email: data.email,
+      phoneNumber: data.phone,
+    };
+    const clientsCol = collection(firestore, 'clients');
     const appointmentsCol = collection(firestore, 'appointments');
+
+    // For simplicity, we create a new client every time.
+    // A more robust solution would check if the client exists.
+    addDocumentNonBlocking(clientsCol, clientData);
     addDocumentNonBlocking(appointmentsCol, appointmentData)
       .then(() => {
         setIsConfirmed(true);
@@ -162,12 +194,14 @@ export default function SchedulePage() {
                 {availableTimes.map((time) => {
                     const fullDateTime = getFullDateTime(time);
                     const isTimePast = date && isToday(date) ? isPast(fullDateTime) : false;
+                    const isBooked = bookedTimes.has(time);
+
                     return (
                         <Button
                             key={time}
                             variant={selectedTime === time ? "default" : "outline"}
                             onClick={() => setSelectedTime(time)}
-                            disabled={!date || isTimePast}
+                            disabled={!date || isTimePast || isBooked}
                             className={cn(selectedTime === time && "bg-primary text-primary-foreground")}
                         >
                             {time}
