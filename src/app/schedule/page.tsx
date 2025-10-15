@@ -5,9 +5,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { isPast, isToday } from "date-fns";
-import { format } from 'date-fns-tz';
+import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Clock, CheckCircle } from "lucide-react";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { collection, Timestamp } from "firebase/firestore";
 
 
 import { AppointmentSchema } from "@/lib/schemas";
@@ -61,35 +61,36 @@ export default function SchedulePage() {
 
     const fullDateTime = getFullDateTime(selectedTime);
 
-    try {
-      const appointmentData = {
-        clientName: data.name,
-        clientEmail: data.email,
-        clientPhone: data.phone,
-        notes: data.issue,
-        startTime: Timestamp.fromDate(fullDateTime),
-        status: "scheduled",
-        createdAt: Timestamp.now(),
-      };
-      
-      const appointmentsCol = collection(firestore, 'appointments');
-      addDocumentNonBlocking(appointmentsCol, appointmentData);
-      
-      setIsConfirmed(true);
-      toast({
-        title: "Cita Confirmada!",
-        description: `Su consulta está programada para el ${format(fullDateTime, "PPP 'a las' p", { timeZone: 'UTC' })}.`,
+    const appointmentData = {
+      clientName: data.name,
+      clientEmail: data.email,
+      clientPhone: data.phone,
+      notes: data.issue,
+      startTime: Timestamp.fromDate(fullDateTime),
+      status: "scheduled",
+      createdAt: Timestamp.now(),
+    };
+    
+    const appointmentsCol = collection(firestore, 'appointments');
+    addDocumentNonBlocking(appointmentsCol, appointmentData)
+      .then(() => {
+        setIsConfirmed(true);
+        toast({
+          title: "Cita Confirmada!",
+          description: `Su consulta está programada para el ${format(fullDateTime, "PPP 'a las' p")}.`,
+        });
+      })
+      .catch((error) => {
+        console.error("Error al agendar la cita:", error);
+        toast({
+          variant: "destructive",
+          title: "¡Oh, oh! Algo salió mal.",
+          description: "No se pudo agendar la cita. Por favor, inténtelo de nuevo.",
+        });
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-    } catch (error) {
-      console.error("Error al agendar la cita:", error);
-      toast({
-        variant: "destructive",
-        title: "¡Oh, oh! Algo salió mal.",
-        description: "No se pudo agendar la cita. Por favor, inténtelo de nuevo.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const getFullDateTime = (time: string): Date => {
@@ -108,7 +109,7 @@ export default function SchedulePage() {
           <CheckCircle className="h-4 w-4 text-green-500" />
           <AlertTitle className="text-green-700 dark:text-green-400">¡Cita Confirmada!</AlertTitle>
           <AlertDescription>
-            Su consulta está agendada para el {format(fullDateTime, "PPP 'a las' p", { timeZone: 'UTC' })}. Recibirá un correo de confirmación en breve.
+            Su consulta está agendada para el {format(fullDateTime, "PPP 'a las' p")}. Recibirá un correo de confirmación en breve.
           </AlertDescription>
         </Alert>
       </div>
@@ -154,7 +155,7 @@ export default function SchedulePage() {
               <Clock className="h-5 w-5" />
               2. Seleccione una Hora
             </CardTitle>
-            <p className="text-sm text-muted-foreground pt-1">{date ? format(date, 'EEEE, d \'de\' MMMM', { timeZone: 'UTC' }) : 'Por favor seleccione un día'}</p>
+            <p className="text-sm text-muted-foreground pt-1">{date ? format(date, 'EEEE, d \'de\' MMMM') : 'Por favor seleccione un día'}</p>
           </CardHeader>
           <CardContent>
              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -184,7 +185,7 @@ export default function SchedulePage() {
                 <CardHeader>
                     <CardTitle className="font-headline text-primary">3. Su Información</CardTitle>
                     <p className="text-sm text-muted-foreground pt-1">
-                        Para su cita el {format(date, 'PPP', { timeZone: 'UTC' })} a las {selectedTime}.
+                        Para su cita el {format(date, 'PPP')} a las {selectedTime}.
                     </p>
                 </CardHeader>
                 <CardContent>

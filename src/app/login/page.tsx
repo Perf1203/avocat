@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -26,9 +25,10 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
+import { useAuth, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor ingrese un correo válido.' }),
@@ -53,23 +53,25 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      toast({
-        title: 'Inicio de sesión exitoso',
-        description: 'Bienvenido de nuevo.',
+    signInWithEmailAndPassword(auth, data.email, data.password)
+      .then(() => {
+        toast({
+          title: 'Inicio de sesión exitoso',
+          description: 'Bienvenido de nuevo.',
+        });
+        router.push('/admin');
+      })
+      .catch((error: any) => {
+        console.error('Error al iniciar sesión:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error de inicio de sesión',
+          description: error.message || 'Credenciales incorrectas. Por favor, inténtelo de nuevo.',
+        });
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-      router.push('/admin');
-    } catch (error: any) {
-      console.error('Error al iniciar sesión:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error de inicio de sesión',
-        description: error.message || 'Credenciales incorrectas. Por favor, inténtelo de nuevo.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (

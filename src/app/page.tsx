@@ -13,7 +13,7 @@ import {
   Scale
 } from "lucide-react";
 import Link from "next/link";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ContentSuggestionTool } from "@/components/content-suggestion-tool";
 import { useFirebase, useUser } from "@/firebase/provider";
-import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 
 const heroImage = PlaceHolderImages.find((img) => img.id === "hero-image");
@@ -135,8 +135,8 @@ export default function Home() {
       flatRate: tempFlatRate,
     };
     
-    updateDocumentNonBlocking(contentRef, contentData);
-    updateDocumentNonBlocking(priceRef, priceData);
+    setDocumentNonBlocking(contentRef, contentData, { merge: true });
+    setDocumentNonBlocking(priceRef, priceData, { merge: true });
 
     setHeadline(tempHeadline);
     setBody(tempBody);

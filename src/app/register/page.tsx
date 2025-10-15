@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -62,7 +62,9 @@ export default function RegisterPage() {
 
       // Add user to the admin role collection
       const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
-      await setDoc(adminRoleRef, { isAdmin: true, createdAt: new Date() });
+      const adminRoleData = { isAdmin: true, createdAt: new Date() };
+
+      setDocumentNonBlocking(adminRoleRef, adminRoleData, { merge: false });
 
       toast({
         title: 'Registro exitoso',
