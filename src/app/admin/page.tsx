@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { useFirebase, useUser } from '@/firebase/provider';
+import { useEffect } from 'react';
+import { useFirebase, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import {
   Table,
@@ -16,7 +16,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useMemoFirebase } from '@/firebase/provider';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -32,23 +31,31 @@ export default function AdminPage() {
     }
   }, [user, isUserLoading, router]);
 
+  const adminRoleRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'roles_admin', user.uid);
+  }, [firestore, user]);
+
+  const { data: adminRole, isLoading: isLoadingRole } = useDoc(adminRoleRef);
+  const isUserAdmin = adminRole && adminRole.isAdmin;
+
   const appointmentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    // This query is intentionally broad for the admin view.
-    // In a real-world scenario, you might add more complex queries or pagination.
+    if (!firestore || !isUserAdmin) return null;
     return query(
       collection(firestore, 'appointments'),
       orderBy('startTime', 'desc')
     );
-  }, [firestore]);
+  }, [firestore, isUserAdmin]);
 
   const {
     data: appointments,
     isLoading: isLoadingAppointments,
     error,
   } = useCollection(appointmentsQuery);
+  
+  const showLoading = isUserLoading || isLoadingRole;
 
-  if (isUserLoading || !user) {
+  if (showLoading) {
     return (
       <div className="container flex min-h-[calc(100vh-8rem)] items-center justify-center py-12">
         <div className="text-center">
@@ -57,7 +64,22 @@ export default function AdminPage() {
       </div>
     );
   }
-
+  
+  if (!isUserAdmin && !showLoading) {
+     return (
+      <div className="container flex min-h-[calc(100vh-8rem)] items-center justify-center py-12 text-center">
+        <div>
+          <h2 className="font-headline text-2xl font-bold text-destructive">Acceso Denegado</h2>
+          <p className="mt-2 text-muted-foreground">
+            No tienes permisos de administrador para ver esta página.
+          </p>
+           <Button asChild className="mt-4">
+            <Link href="/">Volver al Inicio</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-12">
@@ -83,7 +105,7 @@ export default function AdminPage() {
           )}
           {error && (
             <p className="text-destructive">
-              Error al cargar las citas: {error.message}. Es posible que no tengas permisos de administrador.
+              Error al cargar las citas: {error.message}.
             </p>
           )}
           {!isLoadingAppointments && !error && appointments && (
