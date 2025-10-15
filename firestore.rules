@@ -1,78 +1,76 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces a strict user-ownership model for client data and restricts admin-only access for consultation prices and landing page content.
+ * @fileoverview Firestore Security Rules for Prototyping.
+ *
+ * Core Philosophy:
+ * This ruleset implements a strict, path-based ownership model for user data
+ * and an admin-only model for managing consultation prices and landing page content.
  *
  * Data Structure:
- * - /clients/{clientId}: Stores client information, with appointments as subcollections.
- * - /clients/{clientId}/appointments/{appointmentId}: Stores appointment data for specific clients.
- * - /consultation_prices/{priceId}: Stores consultation pricing, accessible only to admins.
- * - /landing_page_content/{contentId}: Stores landing page content, accessible only to admins.
- * - /roles_admin/{userId}: Presence of a document indicates admin role.
+ * - /clients/{clientId}: Stores client information.
+ * - /clients/{clientId}/appointments/{appointmentId}: Stores appointments for each client.
+ * - /consultation_prices/{priceId}: Stores consultation pricing (admin only).
+ * - /landing_page_content/{contentId}: Stores landing page content (admin only).
+ * - /roles_admin/{userId}: Presence of document indicates admin status.
  *
  * Key Security Decisions:
  * - Clients can only access their own data and appointments.
- * - Listing all clients or appointments is disallowed to prevent data leakage.
- * - Consultation prices and landing page content are only accessible to admins.
- * - Admin status is determined by the existence of a document in the `/roles_admin/{userId}` collection.
+ * - Only admins can manage consultation prices and landing page content.
+ * - Listing appointments is restricted to the client owning the appointments.
  *
  * Denormalization for Authorization:
- *   - Path-based ownership is used for clients and appointments, avoiding the need for denormalization or extra `get()` calls.
- *   - Admin status is checked via the `isAdmin()` function, which uses `getAfter()` to verify the role.
+ * - None currently. Path-based ownership is sufficient. Consider denormalizing
+ *   a `members` map into appointments if sharing features are added later.
  *
  * Structural Segregation:
- *   - Consultation prices and landing page content are stored in separate collections to enforce distinct admin-only access control.
+ * - ConsultationPrice and LandingPageContent are in separate collections to
+ *   enforce different security profiles.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the current user is signed in.
-     * @returns {bool} True if the user is authenticated, false otherwise.
+     * @description Checks if the request is authenticated.
      */
     function isSignedIn() {
       return request.auth != null;
     }
 
     /**
-     * @description Checks if the user ID matches the authenticated user's ID.
-     * @param {string} userId - The user ID to compare against.
-     * @returns {bool} True if the user ID matches the authenticated user's ID, false otherwise.
+     * @description Checks if the authenticated user is the owner of the resource based on the provided userId.
      */
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
 
     /**
-     * @description Checks if the user is an existing owner. Combines ownership check with existence check.
-     * @param {string} userId - The user ID to compare against.
-     * @returns {bool} True if the user ID matches the authenticated user's ID and the resource exists, false otherwise.
+     * @description Checks if the authenticated user is an existing owner of the resource based on the provided userId.
+     * Use this function for `update` and `delete` requests to prevent modifying non-existent documents.
      */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
     /**
-     * @description Checks if the current user has admin privileges.
-     * @returns {bool} True if the user has admin privileges, false otherwise.
+     * @description Checks if the authenticated user is an admin by verifying the existence of a document in the roles_admin collection.
      */
     function isAdmin() {
-      return isSignedIn() && existsAfter(/databases/(default)/documents/roles_admin/$(request.auth.uid));
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
     /**
      * @description Rules for the /clients/{clientId} collection.
      * @path /clients/{clientId}
-     * @allow (create) - Authenticated user can create a client document if the client ID matches their UID.
-     * @allow (get, update, delete) - Authenticated user can get, update, or delete a client document if the client ID matches their UID.
-     * @deny (create) - Unauthenticated user cannot create a client document.
-     * @deny (update) - Authenticated user cannot update a client document if the client ID does not match their UID.
-     * @principle Enforces document ownership for writes.
+     * @allow (create) - A user with uid 'user123' can create a client document if request.auth.uid == 'user123'.
+     * @allow (get, list) - A user with uid 'user123' can read a client document if request.auth.uid == 'user123'.
+     * @allow (update, delete) - A user with uid 'user123' can update or delete a client document if request.auth.uid == 'user123' and the document exists.
+     * @deny (create) - A user with uid 'user456' cannot create a client document with ID 'user123'.
+     * @principle Enforces document ownership for writes and restricts read access to the owner.
      */
     match /clients/{clientId} {
       allow get: if isOwner(clientId);
       allow list: if false;
-      allow create: if isOwner(clientId) && request.resource.data.id == clientId;
+      allow create: if isOwner(clientId) && request.resource.data.id == request.auth.uid;
       allow update: if isExistingOwner(clientId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(clientId);
     }
@@ -80,61 +78,59 @@ service cloud.firestore {
     /**
      * @description Rules for the /clients/{clientId}/appointments/{appointmentId} collection.
      * @path /clients/{clientId}/appointments/{appointmentId}
-     * @allow (create) - Authenticated user can create an appointment under their client document if the client ID matches their UID.
-     * @allow (get, update, delete) - Authenticated user can get, update, or delete an appointment under their client document if the client ID matches their UID.
-     * @deny (create) - Unauthenticated user cannot create an appointment.
-     * @deny (update) - Authenticated user cannot update an appointment if the client ID does not match their UID.
-     * @principle Enforces document ownership for writes and relational integrity.
+     * @allow (create) - A user with uid 'user123' can create an appointment under /clients/user123/appointments if request.auth.uid == 'user123'.
+     * @allow (get, list) - A user with uid 'user123' can read appointments under /clients/user123/appointments if request.auth.uid == 'user123'.
+     * @allow (update, delete) - A user with uid 'user123' can update or delete an appointment under /clients/user123/appointments if request.auth.uid == 'user123' and the document exists.
+     * @deny (create) - A user with uid 'user456' cannot create an appointment under /clients/user123/appointments.
+     * @principle Enforces document ownership for writes and restricts read access to the owner.
      */
     match /clients/{clientId}/appointments/{appointmentId} {
       allow get: if isOwner(clientId);
       allow list: if isOwner(clientId);
-      allow create: if isOwner(clientId) && request.resource.data.clientId == clientId;
-      allow update: if isExistingOwner(clientId) && request.resource.data.clientId == clientId;
+      allow create: if isOwner(clientId);
+      allow update: if isExistingOwner(clientId);
       allow delete: if isExistingOwner(clientId);
     }
 
     /**
      * @description Rules for the /consultation_prices/{priceId} collection.
      * @path /consultation_prices/{priceId}
-     * @allow (get, list) - Any user can read consultation prices.
+     * @allow (get, list) - Any authenticated user can read consultation prices.
      * @allow (create, update, delete) - Only admins can create, update, or delete consultation prices.
-     * @deny (create) - Non-admin user cannot create consultation prices.
+     * @deny (create) - A non-admin user cannot create a consultation price.
      * @principle Restricts write access to admins only.
      */
     match /consultation_prices/{priceId} {
-      allow get, list: if true;
+      allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
     /**
      * @description Rules for the /landing_page_content/{contentId} collection.
      * @path /landing_page_content/{contentId}
-     * @allow (get, list) - Any user can read landing page content.
+     * @allow (get, list) - Any authenticated user can read landing page content.
      * @allow (create, update, delete) - Only admins can create, update, or delete landing page content.
-     * @deny (create) - Non-admin user cannot create landing page content.
+     * @deny (create) - A non-admin user cannot create landing page content.
      * @principle Restricts write access to admins only.
      */
     match /landing_page_content/{contentId} {
-      allow get, list: if true;
+      allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
     /**
      * @description Rules for the /roles_admin/{userId} collection.
      * @path /roles_admin/{userId}
-     * @allow (get) - Allows a user to check if they are an admin.
-     * @allow (create) - Allows admin role document to be created.
-     * @allow (update, delete) - Only allow admins to update or delete other admins
-     * @deny (create) - Non-admin user cannot grant themselves admin access.
-     * @principle Restricts write access to admins only.
+     * @allow (get) - Any authenticated user can get a role.
+     * @allow (list) - Listing is not allowed.
+     * @allow (create, update, delete) - Only admins can create, update or delete roles.
+     * @deny (create) - A non-admin cannot grant themself admin.
+     * @principle Restricts write access to admins only, and read access to all.
      */
     match /roles_admin/{userId} {
-        allow get: if isOwner(userId);
+        allow get: if isSignedIn();
         allow list: if false;
-        allow create: if isAdmin() && isOwner(userId);
-        allow update: if isAdmin() && resource != null;
-        allow delete: if isAdmin() && resource != null;
+        allow create, update, delete: if isAdmin();
     }
   }
 }
