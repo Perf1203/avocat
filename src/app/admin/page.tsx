@@ -60,9 +60,9 @@ export default function AdminPage() {
   const isUserAdmin = adminRole?.isAdmin === true;
 
   const registrationSettingsRef = useMemoFirebase(() => {
-    if (!firestore || !isUserAdmin) return null;
+    if (!firestore) return null; // Removed admin check to allow settings fetch for all logged-in users initially
     return doc(firestore, 'app_settings', 'registration');
-  }, [firestore, isUserAdmin]);
+  }, [firestore]);
 
   const { data: registrationSettings, isLoading: isLoadingRegistration } = useDoc(registrationSettingsRef);
 
@@ -93,7 +93,7 @@ export default function AdminPage() {
 
   const { data: clients, isLoading: isLoadingClients, error: clientsError } = useCollection(clientsQuery);
   
-  const showLoading = isUserLoading || isLoadingRole || isLoadingRegistration;
+  const showLoading = isUserLoading || isLoadingRole;
 
   const handleDelete = (collectionName: string, docId: string) => {
     if (!firestore) return;
@@ -306,6 +306,12 @@ export default function AdminPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {isLoadingRegistration ? (
+                 <div className="flex items-center justify-between space-x-2">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-6 w-11" />
+                  </div>
+              ): (
               <div className="flex items-center justify-between space-x-2">
                 <Label htmlFor="public-registration" className="font-medium">
                   Activează Înregistrarea Publică
@@ -316,6 +322,7 @@ export default function AdminPage() {
                   onCheckedChange={handleRegistrationToggle}
                 />
               </div>
+              )}
               <p className="text-sm text-muted-foreground mt-2">
                 Permite utilizatorilor să își creeze un cont nou din antet.
               </p>

@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirebase, useDoc, useMemoFirebase } from '@/firebase';
+import { useAuth, useFirebase, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { RegistrationSchema } from '@/lib/schemas';
@@ -71,15 +71,26 @@ export default function RegisterPage() {
   });
 
   const onSubmit = async (data: RegistrationFormValues) => {
+    if (!firestore) {
+      toast({
+        variant: "destructive",
+        title: "Eroare",
+        description: "Baza de date nu este disponibilă. Încercați din nou mai târziu.",
+      });
+      return;
+    }
     setIsLoading(true);
     createUserWithEmailAndPassword(auth, data.email, data.password)
       .then((userCredential) => {
+        const user = userCredential.user;
+        const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
+        setDocumentNonBlocking(adminRoleRef, { isAdmin: true }, {});
+
         toast({
           title: 'Cont creat cu succes',
-          description: 'Ați fost autentificat.',
+          description: 'Ați fost autentificat ca administrator.',
         });
-        // Redirect to a dashboard or home page after registration
-        router.push('/');
+        router.push('/admin');
       })
       .catch((error: any) => {
         console.error('Eroare la creare cont:', error);
@@ -126,7 +137,7 @@ export default function RegisterPage() {
             Creare Cont Nou
           </CardTitle>
           <CardDescription>
-            Completați detaliile de mai jos pentru a vă crea un cont.
+            Completați detaliile de mai jos pentru a vă crea un cont de administrator.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
@@ -179,7 +190,7 @@ export default function RegisterPage() {
             <CardFooter className="flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isLoading ? 'Se creează contul...' : 'Creare Cont'}
+                {isLoading ? 'Se creează contul...' : 'Creare Cont Admin'}
               </Button>
               <p className="text-sm text-muted-foreground">
                 Aveți deja un cont?{' '}
