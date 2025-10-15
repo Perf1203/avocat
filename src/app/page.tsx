@@ -87,7 +87,8 @@ export default function Home() {
 
   const [tempHeadline, setTempHeadline] = useState("");
   const [tempBody, setTempBody] = useState("");
-  const [tempCallToAction, setTempCallToAction] = useState("");
+  const [tempCallToAction, setTempCallToAction]
+ = useState("");
   const [tempHeroImageUrl, setTempHeroImageUrl] = useState("");
   const [tempPricePerHour, setTempPricePerHour] = useState(0);
   const [tempFlatRate, setTempFlatRate] = useState(0);
@@ -346,12 +347,22 @@ export default function Home() {
                   />
                 </div>
                  <div>
-                  <Label htmlFor="hero-image-url">URL Imagine Principală</Label>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="hero-image-url">URL Imagine Principală</Label>
+                    <a
+                      href="https://postimages.org/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline"
+                    >
+                      (încarcă pe postimages.org)
+                    </a>
+                  </div>
                   <Input
                     id="hero-image-url"
                     value={tempHeroImageUrl}
                     onChange={(e) => setTempHeroImageUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
+                    placeholder="https://i.postimg.cc/..."
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -417,3 +428,5 @@ export default function Home() {
     </>
   );
 }
+
+    
