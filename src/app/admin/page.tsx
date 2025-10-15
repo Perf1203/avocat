@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useFirebase, useUser } from '@/firebase/provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy } from 'firebase/firestore';
@@ -26,8 +26,16 @@ export default function AdminPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
+    // This query is intentionally broad for the admin view.
+    // In a real-world scenario, you might add more complex queries or pagination.
     return query(
       collection(firestore, 'appointments'),
       orderBy('startTime', 'desc')
@@ -36,21 +44,18 @@ export default function AdminPage() {
 
   const {
     data: appointments,
-    isLoading,
+    isLoading: isLoadingAppointments,
     error,
   } = useCollection(appointmentsQuery);
 
-  if (isUserLoading) {
+  if (isUserLoading || !user) {
     return (
-      <div className="container py-12 text-center">
-        <p>Cargando...</p>
+      <div className="container flex min-h-[calc(100vh-8rem)] items-center justify-center py-12">
+        <div className="text-center">
+          <p>Cargando y verificando acceso...</p>
+        </div>
       </div>
     );
-  }
-
-  if (!user) {
-    router.push('/login');
-    return null;
   }
 
 
@@ -69,7 +74,7 @@ export default function AdminPage() {
           <CardTitle>Citas Agendadas</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading && (
+          {isLoadingAppointments && (
             <div className="space-y-2">
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
@@ -81,7 +86,7 @@ export default function AdminPage() {
               Error al cargar las citas: {error.message}. Es posible que no tengas permisos de administrador.
             </p>
           )}
-          {!isLoading && !error && appointments && (
+          {!isLoadingAppointments && !error && appointments && (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -111,7 +116,7 @@ export default function AdminPage() {
               </TableBody>
             </Table>
           )}
-           {!isLoading && appointments?.length === 0 && (
+           {!isLoadingAppointments && appointments?.length === 0 && (
             <div className="text-center text-muted-foreground py-8">
               No hay citas agendadas.
             </div>
