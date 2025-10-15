@@ -2,9 +2,9 @@
   "placeholderImages": [
     {
       "id": "hero-image",
-      "description": "A modern and professional legal office setting with natural light.",
-      "imageUrl": "https://picsum.photos/seed/avocat-law-hero/1920/1080",
-      "imageHint": "law office"
+      "description": "A classic law library with books and a justice scale, conveying authority and tradition.",
+      "imageUrl": "https://picsum.photos/seed/law-library/1920/1080",
+      "imageHint": "law library"
     }
   ]
 }
