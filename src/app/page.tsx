@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -33,7 +34,7 @@ import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const heroImage = PlaceHolderImages.find((img) => img.id === "hero-image");
+const defaultHeroImage = PlaceHolderImages.find((img) => img.id === "hero-image");
 
 const practiceAreas = [
   {
@@ -77,6 +78,7 @@ export default function Home() {
   const [headline, setHeadline] = useState("");
   const [body, setBody] = useState("");
   const [callToAction, setCallToAction] = useState("");
+  const [heroImageUrl, setHeroImageUrl] = useState(defaultHeroImage?.imageUrl || "");
   const [pricePerHour, setPricePerHour] = useState(0);
   const [flatRate, setFlatRate] = useState(0);
 
@@ -86,18 +88,27 @@ export default function Home() {
   const [tempHeadline, setTempHeadline] = useState("");
   const [tempBody, setTempBody] = useState("");
   const [tempCallToAction, setTempCallToAction] = useState("");
+  const [tempHeroImageUrl, setTempHeroImageUrl] = useState("");
   const [tempPricePerHour, setTempPricePerHour] = useState(0);
   const [tempFlatRate, setTempFlatRate] = useState(0);
   
   useEffect(() => {
     if (contentData) {
-      const { headline, bodyText, callToActionText } = contentData;
-      setHeadline(headline || "Expertiză Juridică de Încredere pentru Provocări Moderne");
-      setBody(bodyText || "Avocat Law oferă servicii juridice de prim rang, adaptate nevoilor dumneavoastră unice. Echipa noastră de avocați cu experiență este dedicată obținerii celor mai bune rezultate posibile pentru clienții noștri prin consiliere strategică și pledoarie neobosită.");
-      setCallToAction(callToActionText || "Programează o Consultație");
-      setTempHeadline(headline || "Expertiză Juridică de Încredere pentru Provocări Moderne");
-      setTempBody(bodyText || "Avocat Law oferă servicii juridice de prim rang, adaptate nevoilor dumneavoastră unice. Echipa noastră de avocați cu experiență este dedicată obținerii celor mai bune rezultate posibile pentru clienții noștri prin consiliere strategică și pledoarie neobosită.");
-      setTempCallToAction(callToActionText || "Programează o Consultație");
+      const { headline, bodyText, callToActionText, imageUrl } = contentData;
+      const initialHeadline = headline || "Expertiză Juridică de Încredere pentru Provocări Moderne";
+      const initialBody = bodyText || "Avocat Law oferă servicii juridice de prim rang, adaptate nevoilor dumneavoastră unice. Echipa noastră de avocați cu experiență este dedicată obținerii celor mai bune rezultate posibile pentru clienții noștri prin consiliere strategică și pledoarie neobosită.";
+      const initialCta = callToActionText || "Programează o Consultație";
+      const initialImageUrl = imageUrl || defaultHeroImage?.imageUrl || "";
+
+      setHeadline(initialHeadline);
+      setBody(initialBody);
+      setCallToAction(initialCta);
+      setHeroImageUrl(initialImageUrl);
+      
+      setTempHeadline(initialHeadline);
+      setTempBody(initialBody);
+      setTempCallToAction(initialCta);
+      setTempHeroImageUrl(initialImageUrl);
     }
   }, [contentData]);
 
@@ -119,6 +130,7 @@ export default function Home() {
       headline: tempHeadline,
       bodyText: tempBody,
       callToActionText: tempCallToAction,
+      imageUrl: tempHeroImageUrl,
       sectionName: "Hero"
     };
 
@@ -133,6 +145,7 @@ export default function Home() {
     setHeadline(tempHeadline);
     setBody(tempBody);
     setCallToAction(tempCallToAction);
+    setHeroImageUrl(tempHeroImageUrl);
     setPricePerHour(tempPricePerHour);
     setFlatRate(tempFlatRate);
     setIsEditing(false);
@@ -147,6 +160,7 @@ export default function Home() {
     setTempHeadline(headline);
     setTempBody(body);
     setTempCallToAction(callToAction);
+    setTempHeroImageUrl(heroImageUrl);
     setTempPricePerHour(pricePerHour);
     setTempFlatRate(flatRate);
     setIsEditing(false);
@@ -168,11 +182,19 @@ export default function Home() {
     <>
       <div className="relative isolate">
         <section className="relative h-[60vh] min-h-[500px] w-full">
-          {heroImage && (
+          {heroImageUrl ? (
             <Image
-              src={heroImage.imageUrl}
-              alt={heroImage.description}
-              data-ai-hint={heroImage.imageHint}
+              src={heroImageUrl}
+              alt={headline || "Avocat Law hero image"}
+              fill
+              className="object-cover"
+              priority
+            />
+          ) : defaultHeroImage && (
+            <Image
+              src={defaultHeroImage.imageUrl}
+              alt={defaultHeroImage.description}
+              data-ai-hint={defaultHeroImage.imageHint}
               fill
               className="object-cover"
               priority
@@ -321,6 +343,15 @@ export default function Home() {
                     id="cta"
                     value={tempCallToAction}
                     onChange={(e) => setTempCallToAction(e.target.value)}
+                  />
+                </div>
+                 <div>
+                  <Label htmlFor="hero-image-url">URL Imagine Principală</Label>
+                  <Input
+                    id="hero-image-url"
+                    value={tempHeroImageUrl}
+                    onChange={(e) => setTempHeroImageUrl(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">

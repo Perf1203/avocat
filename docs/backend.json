@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Appointment": {
@@ -132,7 +133,8 @@
         },
         "imageUrl": {
           "type": "string",
-          "description": "URL of the image associated with the section."
+          "description": "URL of the image associated with the section.",
+          "format": "uri"
         }
       },
       "required": [
