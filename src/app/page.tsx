@@ -229,12 +229,13 @@ export default function Home() {
                       <Link href="/schedule">{content.about.callToActionText}</Link>
                     </Button>
                 </div>
-                 <div className="order-1 lg:order-2 h-96 lg:h-[32rem] relative rounded-lg overflow-hidden shadow-xl">
+                 <div className="order-1 lg:order-2">
                     <Image 
                         src={content.about.imageUrl} 
                         alt="Echipa Avocat Law în discuții" 
-                        fill 
-                        className="object-cover"
+                        width={600}
+                        height={400}
+                        className="rounded-lg shadow-xl w-full h-auto object-cover"
                         data-ai-hint={content.about.imageHint}
                     />
                 </div>
@@ -423,5 +424,3 @@ export default function Home() {
     </>
   );
 }
-
-    
