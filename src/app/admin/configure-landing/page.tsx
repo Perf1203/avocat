@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useFirebase, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
@@ -12,16 +12,29 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { ArrowLeft, Wand2 } from 'lucide-react';
+import { ArrowLeft, Wand2, PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { ContentSuggestionTool } from '@/components/content-suggestion-tool';
+import { TestimonialDialog } from '@/components/testimonial-dialog';
 import {
     Accordion,
     AccordionContent,
     AccordionItem,
     AccordionTrigger,
-} from "@/components/ui/accordion"
+} from "@/components/ui/accordion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 export default function ConfigureLandingPage() {
@@ -33,6 +46,10 @@ export default function ConfigureLandingPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [content, setContent] = useState<any>({});
     const [showSuggestionTool, setShowSuggestionTool] = useState(false);
+    
+    // Testimonial State
+    const [isTestimonialDialogOpen, setIsTestimonialDialogOpen] = useState(false);
+    const [editingTestimonial, setEditingTestimonial] = useState<any>(null);
 
     const adminRoleRef = useMemoFirebase(() => {
         if (!firestore || !user) return null;
@@ -44,6 +61,9 @@ export default function ConfigureLandingPage() {
 
     const contentCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, "landing_page_content") : null, [firestore]);
     const { data: contentData, isLoading: isContentLoading } = useCollection(contentCollectionRef);
+    
+    const testimonialsCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, "testimonials") : null, [firestore]);
+    const { data: testimonialsData, isLoading: areTestimonialsLoading } = useCollection(testimonialsCollectionRef);
 
     useEffect(() => {
         if (!isUserLoading && !user) {
@@ -87,6 +107,37 @@ export default function ConfigureLandingPage() {
             description: `Conținutul pentru secțiunea "${sectionId}" a fost actualizat.`
         });
     }
+    
+    const handleSaveTestimonial = (testimonialData: any) => {
+        if (!firestore) return;
+
+        if (editingTestimonial) {
+            // Update existing testimonial
+            const docRef = doc(firestore, 'testimonials', editingTestimonial.id);
+            updateDocumentNonBlocking(docRef, testimonialData);
+            toast({ title: "Testimonial Actualizat", description: "Modificările au fost salvate." });
+        } else {
+            // Add new testimonial
+            const collectionRef = collection(firestore, 'testimonials');
+            addDocumentNonBlocking(collectionRef, testimonialData);
+            toast({ title: "Testimonial Adăugat", description: "Noul testimonial a fost adăugat." });
+        }
+        setEditingTestimonial(null);
+        setIsTestimonialDialogOpen(false);
+    };
+
+    const handleEditTestimonial = (testimonial: any) => {
+        setEditingTestimonial(testimonial);
+        setIsTestimonialDialogOpen(true);
+    };
+    
+    const handleDeleteTestimonial = (testimonialId: string) => {
+        if (!firestore) return;
+        const docRef = doc(firestore, 'testimonials', testimonialId);
+        deleteDocumentNonBlocking(docRef);
+        toast({ title: 'Testimonial Șters', description: 'Testimonialul a fost șters.' });
+    };
+
 
     const handleApplySuggestion = (suggestion: any) => {
         const { suggestedHeadline, suggestedBodyText, suggestedCallToAction } = suggestion;
@@ -202,39 +253,98 @@ export default function ConfigureLandingPage() {
                     </AccordionContent>
                 </AccordionItem>
                 
+                 {/* Testimonials Section */}
+                <AccordionItem value="item-5">
+                    <AccordionTrigger className="text-xl font-headline bg-muted px-4 rounded-t-lg">Testimoniale</AccordionTrigger>
+                    <AccordionContent className="p-0">
+                        <Card className="rounded-t-none">
+                            <CardHeader>
+                                <CardTitle>Gestionare Testimoniale</CardTitle>
+                                <CardDescription>Adăugați, editați sau ștergeți testimonialele afișate pe pagina principală.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {areTestimonialsLoading ? (
+                                    <Skeleton className="h-24 w-full" />
+                                ) : (
+                                    testimonialsData?.map((testimonial: any) => (
+                                        <Card key={testimonial.id} className="flex items-start gap-4 p-4">
+                                            <Avatar>
+                                                <AvatarImage src={testimonial.avatarUrl} />
+                                                <AvatarFallback>{testimonial.author.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1">
+                                                <p className="font-semibold">{testimonial.author} - <span className="text-sm text-muted-foreground">{testimonial.title}</span></p>
+                                                <p className="text-sm italic text-foreground/80">"{testimonial.quote}"</p>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Button variant="ghost" size="icon" onClick={() => handleEditTestimonial(testimonial)}>
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Sunteți sigur?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Această acțiune nu poate fi anulată. Testimonialul va fi șters permanent.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Anulează</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteTestimonial(testimonial.id)}>
+                                                                Șterge
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </Card>
+                                    ))
+                                )}
+                            </CardContent>
+                            <CardFooter className="flex justify-center border-t pt-4">
+                                <Button variant="outline" onClick={() => { setEditingTestimonial(null); setIsTestimonialDialogOpen(true); }}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Adaugă Testimonial Nou
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    </AccordionContent>
+                </AccordionItem>
+                
                  {/* Pricing Section */}
                 <AccordionItem value="item-3">
                     <AccordionTrigger className="text-xl font-headline bg-muted px-4 rounded-t-lg">Secțiune Prețuri</AccordionTrigger>
                     <AccordionContent className="p-0">
                          <Card className="rounded-t-none">
-                            <CardHeader>
-                                <CardTitle>Prețuri Consultații</CardTitle>
-                                <CardDescription>Editează planurile de prețuri afișate pe pagina principală. Lasă un câmp gol pentru a nu-l afișa.</CardDescription>
+                             <CardHeader>
+                                <CardTitle>Texte Secțiune Prețuri</CardTitle>
+                                <CardDescription>Editează titlul și descrierea pentru secțiunea de prețuri.</CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-6">
-                                {content.prices ? Object.keys(content.prices).map(priceKey => (
-                                    <div key={priceKey} className="grid grid-cols-1 md:grid-cols-3 gap-4 border p-4 rounded-md">
-                                        <div className="space-y-1 md:col-span-3">
-                                            <Label>Descriere Plan</Label>
-                                            <Input value={content.prices[priceKey]?.description || ''} onChange={(e) => handleInputChange('prices', `${priceKey}.description`, e.target.value)} />
-                                        </div>
-                                         <div className="space-y-1">
-                                            <Label>Taxă Unică (€)</Label>
-                                            <Input type="number" value={content.prices[priceKey]?.flatRate || ''} onChange={(e) => handleInputChange('prices', `${priceKey}.flatRate`, Number(e.target.value))} />
-                                        </div>
-                                         <div className="space-y-1">
-                                            <Label>Preț pe Oră (€)</Label>
-                                            <Input type="number" value={content.prices[priceKey]?.pricePerHour || ''} onChange={(e) => handleInputChange('prices', `${priceKey}.pricePerHour`, Number(e.target.value))} />
-                                        </div>
-                                    </div>
-                                )) : (
-                                    <p className="text-muted-foreground">Adaugă prețuri din Firestore (colecția `consultation_prices`).</p>
-                                )}
-                                 <p className="text-sm text-muted-foreground">Pentru a adăuga sau șterge planuri de prețuri, trebuie să editați direct colecția <code className="bg-muted p-1 rounded-sm">consultation_prices</code> din baza de date Firestore.</p>
-
+                            <CardContent className="space-y-4">
+                                 <div className="space-y-1">
+                                    <Label htmlFor="pricing-title">Titlu</Label>
+                                    <Input id="pricing-title" value={content.pricing?.title || ''} onChange={(e) => handleInputChange('pricing', 'title', e.target.value)} />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="pricing-description">Descriere</Label>
+                                    <Textarea id="pricing-description" value={content.pricing?.description || ''} onChange={(e) => handleInputChange('pricing', 'description', e.target.value)} rows={2}/>
+                                </div>
+                                <div className="!mt-6 border-t pt-6">
+                                     <h4 className="font-medium text-foreground">Gestionare Planuri de Prețuri</h4>
+                                     <p className="text-sm text-muted-foreground mt-1">
+                                        Pentru a adăuga, edita sau șterge planurile de prețuri, trebuie să modificați direct documentele din colecția <code className="bg-muted px-1.5 py-0.5 rounded-sm font-mono text-xs">consultation_prices</code> în baza de date Firestore.
+                                    </p>
+                                    <p className="text-sm text-muted-foreground mt-2">
+                                        Fiecare document din acea colecție va fi afișat automat ca un card de preț pe pagina principală.
+                                    </p>
+                                </div>
                             </CardContent>
                              <CardFooter className="flex justify-end">
-                                <Button onClick={() => handleSaveSection('pricing_text')}>Salvează Descrierea</Button>
+                                <Button onClick={() => handleSaveSection('pricing')}>Salvează Textele</Button>
                             </CardFooter>
                         </Card>
                     </AccordionContent>
@@ -283,6 +393,13 @@ export default function ConfigureLandingPage() {
                 }}
                 onApplySuggestion={handleApplySuggestion}
             />
+            <TestimonialDialog
+                isOpen={isTestimonialDialogOpen}
+                onOpenChange={setIsTestimonialDialogOpen}
+                testimonial={editingTestimonial}
+                onSave={handleSaveTestimonial}
+            />
         </div>
     );
 }
+

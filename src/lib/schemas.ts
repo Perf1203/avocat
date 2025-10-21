@@ -38,4 +38,10 @@ export const BlogPostSchema = z.object({
   content: z.string().min(50, { message: "Conținutul trebuie să aibă cel puțin 50 de caractere." }),
 });
 
+export const TestimonialSchema = z.object({
+  quote: z.string().min(10, { message: "Citatul trebuie să aibă cel puțin 10 caractere." }),
+  author: z.string().min(3, { message: "Numele autorului trebuie să aibă cel puțin 3 caractere." }),
+  title: z.string().min(3, { message: "Titlul autorului trebuie să aibă cel puțin 3 caractere." }),
+  avatarUrl: z.string().url({ message: "Vă rugăm să introduceți un URL valid pentru avatar." }).optional().or(z.literal('')),
+});
     

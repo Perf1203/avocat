@@ -33,6 +33,20 @@
       },
       "required": ["postId", "authorId", "authorName", "text", "timestamp"]
     },
+     "Testimonial": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Testimonial",
+      "type": "object",
+      "description": "Represents a client testimonial.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the testimonial." },
+        "quote": { "type": "string", "description": "The testimonial text." },
+        "author": { "type": "string", "description": "The name of the person giving the testimonial." },
+        "title": { "type": "string", "description": "The title or company of the author (e.g., 'CEO, Tech Solutions')." },
+        "avatarUrl": { "type": "string", "format": "uri", "description": "URL for the author's avatar image." }
+      },
+      "required": ["quote", "author", "title"]
+    },
     "Appointment": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Appointment",
@@ -410,6 +424,19 @@
           "params": [
             { "name": "postId", "description": "The blog post ID." },
             { "name": "commentId", "description": "The comment ID." }
+          ]
+        }
+      },
+      {
+        "path": "/testimonials/{testimonialId}",
+        "definition": {
+          "entityName": "Testimonial",
+          "schema": {
+            "$ref": "#/backend/entities/Testimonial"
+          },
+          "description": "Stores client testimonials. Publicly readable, admin-writable.",
+          "params": [
+            { "name": "testimonialId", "description": "The unique ID for the testimonial." }
           ]
         }
       },

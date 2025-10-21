@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -65,13 +66,6 @@ const defaultContent = {
             { icon: "BookOpen", title: "Proprietate Intelectuală", description: "Protejarea inovațiilor și creațiilor dvs. cu strategii solide de brevetare, mărci comerciale și drepturi de autor." },
         ]
     },
-    testimonials: {
-        title: "Ce Spun Clienții Noștri",
-        items: [
-            { quote: "Profesionalismul și dedicarea echipei Avocat Law au depășit cu mult așteptările noastre. Soluțiile lor strategice au fost esențiale pentru succesul nostru.", author: "Alexandru Popescu", title: "CEO, Tech Solutions", avatar: "https://i.pravatar.cc/150?img=12" },
-            { quote: "Am fost impresionat de atenția la detalii și de comunicarea transparentă pe parcursul întregului proces. Recomand cu încredere serviciile lor.", author: "Elena Ionescu", title: "Manager, Innovate Real Estate", avatar: "https://i.pravatar.cc/150?img=5" },
-        ]
-    },
     pricing: {
         title: "Consultanță Transparentă",
         description: "Oferim structuri de preț clare și competitive, adaptate nevoilor dumneavoastră.",
@@ -110,11 +104,13 @@ export default function Home() {
   const pricesCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, "consultation_prices") : null, [firestore]);
   const { data: pricesData, isLoading: arePricesLoading } = useCollection(pricesCollectionRef);
   
+  const testimonialsCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, "testimonials") : null, [firestore]);
+  const { data: testimonialsData, isLoading: areTestimonialsLoading } = useCollection(testimonialsCollectionRef);
+  
   const blogPostsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "blog_posts"), orderBy("date", "desc")) : null, [firestore]);
   const { data: blogPosts, isLoading: areBlogPostsLoading } = useCollection(blogPostsQuery);
 
   const [content, setContent] = useState(defaultContent);
-  const [prices, setPrices] = useState<any[]>([]);
 
   useEffect(() => {
     if (contentData) {
@@ -129,12 +125,6 @@ export default function Home() {
     }
   }, [contentData]);
 
-  useEffect(() => {
-    if (pricesData) {
-        setPrices(pricesData as any[]);
-    }
-  }, [pricesData]);
-  
   const StatIcon = ({ name }: { name: string }) => {
     const Icon = iconMap[name];
     return Icon ? <Icon className="h-8 w-8 text-accent" /> : null;
@@ -279,28 +269,36 @@ export default function Home() {
                  <div className="text-center max-w-3xl mx-auto">
                     <span className="font-semibold text-primary uppercase tracking-wider">Testimoniale</span>
                     <h2 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl mt-2">
-                        {content.testimonials.title}
+                        Ce Spun Clienții Noștri
                     </h2>
                 </div>
                 <div className="mt-20 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {content.testimonials.items.map((testimonial) => (
-                        <Card key={testimonial.author} className="p-8">
-                            <CardContent className="p-0">
-                                <MessageCircle className="h-8 w-8 text-accent mb-4" />
-                                <blockquote className="text-lg text-foreground/90 italic">"{testimonial.quote}"</blockquote>
-                            </CardContent>
-                            <CardFooter className="pt-6 pb-0 px-0">
-                                 <Avatar>
-                                    <AvatarImage src={testimonial.avatar} alt={testimonial.author} />
-                                    <AvatarFallback>{testimonial.author.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div className="ml-4">
-                                    <p className="font-semibold">{testimonial.author}</p>
-                                    <p className="text-sm text-muted-foreground">{testimonial.title}</p>
-                                </div>
-                            </CardFooter>
-                        </Card>
-                    ))}
+                     {areTestimonialsLoading ? (
+                        [...Array(2)].map((_, i) => (
+                            <Card key={i} className="p-8"><Skeleton className="h-full w-full"/></Card>
+                        ))
+                    ) : testimonialsData && testimonialsData.length > 0 ? (
+                        testimonialsData.map((testimonial: any) => (
+                            <Card key={testimonial.id} className="p-8">
+                                <CardContent className="p-0">
+                                    <MessageCircle className="h-8 w-8 text-accent mb-4" />
+                                    <blockquote className="text-lg text-foreground/90 italic">"{testimonial.quote}"</blockquote>
+                                </CardContent>
+                                <CardFooter className="pt-6 pb-0 px-0">
+                                    <Avatar>
+                                        <AvatarImage src={testimonial.avatarUrl} alt={testimonial.author} />
+                                        <AvatarFallback>{testimonial.author.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="ml-4">
+                                        <p className="font-semibold">{testimonial.author}</p>
+                                        <p className="text-sm text-muted-foreground">{testimonial.title}</p>
+                                    </div>
+                                </CardFooter>
+                            </Card>
+                        ))
+                    ) : (
+                         <p className="col-span-full text-center text-muted-foreground">Nu există testimoniale adăugate.</p>
+                    )}
                 </div>
             </div>
         </section>
@@ -322,8 +320,8 @@ export default function Home() {
                         [...Array(2)].map((_, i) => (
                             <Card key={i} className="flex flex-col"><Skeleton className="h-full w-full"/></Card>
                         ))
-                   ) : prices.length > 0 ? (
-                    prices.map((price) => (
+                   ) : pricesData && pricesData.length > 0 ? (
+                    (pricesData as any[]).map((price) => (
                         <Card key={price.id} className="flex flex-col">
                             <CardHeader>
                                 <CardTitle className="font-headline text-2xl flex items-center gap-2">
