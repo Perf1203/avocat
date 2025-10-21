@@ -2,9 +2,33 @@
   "placeholderImages": [
     {
       "id": "hero-image",
-      "description": "A classic law library with books and a justice scale, conveying authority and tradition.",
-      "imageUrl": "https://i.postimg.cc/3wt2ghKs/law-and.jpg",
-      "imageHint": "law library"
+      "description": "A modern and sophisticated law office interior, conveying professionalism and success.",
+      "imageUrl": "https://i.postimg.cc/13Yp8kG1/bermix-studio-a-VCH-3-B-7-E-unsplash.jpg",
+      "imageHint": "law office"
+    },
+    {
+      "id": "about-image",
+      "description": "A team of lawyers collaborating in a bright, modern meeting room.",
+      "imageUrl": "https://i.postimg.cc/L5YwdyP4/hunters-race-MYbh-N8-Kaa-Ec-unsplash.jpg",
+      "imageHint": "lawyers meeting"
+    },
+    {
+      "id": "blog-1",
+      "description": "A close-up of a gavel and law books, symbolizing justice and legislation.",
+      "imageUrl": "https://i.postimg.cc/tJ08L4fQ/scott-graham-OQMZw-Nd3-Th-U-unsplash.jpg",
+      "imageHint": "law books"
+    },
+    {
+      "id": "blog-2",
+      "description": "A person typing on a laptop with a digital lock icon overlay, representing cybersecurity and intellectual property.",
+      "imageUrl": "https://i.postimg.cc/Jz3xLpF8/tingey-injury-law-firm-y-Cd-S-L3-T-0-I-unsplash.jpg",
+      "imageHint": "digital security"
+    },
+    {
+      "id": "blog-3",
+      "description": "A set of keys on a blueprint for a new house, representing real estate transactions.",
+      "imageUrl": "https://i.postimg.cc/d0pW12M4/maria-ziegler-j-K9-I8-Kq-DC-A-unsplash.jpg",
+      "imageHint": "real estate"
     }
   ]
 }
