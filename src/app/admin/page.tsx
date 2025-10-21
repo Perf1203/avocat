@@ -19,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate } from 'lucide-react';
+import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate, Newspaper } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -520,6 +520,24 @@ export default function AdminPage() {
               </Button>
             </CardContent>
           </Card>
+           <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Newspaper className="h-5 w-5" />
+                Gestionare Blog
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Creați și editați articolele de pe blogul dumneavoastră.
+              </p>
+              <Button asChild className='w-full'>
+                <Link href="/admin/blog">
+                  Administrează Articolele
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -706,5 +724,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
