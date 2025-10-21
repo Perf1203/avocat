@@ -9,7 +9,7 @@ export const AppointmentSchema = z.object({
   issue: z
     .string()
     .min(10, {
-      message: "Vă rugăm să descrieți pe scurt problema dvs. (cel puțin 10 caractere).",
+      message: "Vă rugăm să descrieți pe scurt problema dvs. juridică (cel puțin 10 caractere).",
     }),
 });
 
@@ -30,3 +30,12 @@ export const RegistrationSchema = z.object({
   message: "Parolele nu se potrivesc.",
   path: ["confirmPassword"],
 });
+
+export const BlogPostSchema = z.object({
+  title: z.string().min(5, { message: "Titlul trebuie să aibă cel puțin 5 caractere." }),
+  excerpt: z.string().min(10, { message: "Extrasul trebuie să aibă cel puțin 10 caractere." }),
+  imageUrl: z.string().url({ message: "Vă rugăm să introduceți un URL valid pentru imagine." }),
+  content: z.string().min(50, { message: "Conținutul trebuie să aibă cel puțin 50 de caractere." }),
+});
+
+    

@@ -1,0 +1,43 @@
+{
+    "blogPosts": [
+        {
+            "slug": "navigarea-modificarilor-legislative-din-2024",
+            "title": "Navigarea Modificărilor Legislative din 2024",
+            "date": "25 Iulie 2024",
+            "excerpt": "O analiză detaliată a noilor reglementări fiscale și cum acestea vă pot afecta afacerea...",
+            "imageUrl": "https://i.postimg.cc/tJ08L4fQ/scott-graham-OQMZw-Nd3-Th-U-unsplash.jpg",
+            "imageHint": "law books",
+            "content": [
+                "O analiză detaliată a noilor reglementări fiscale și cum acestea vă pot afecta afacerea...",
+                "Aici ar veni conținutul complet al articolului de blog. Acesta este un text demonstrativ pentru a arăta structura paginii. Puteți extinde acest conținut cu paragrafe multiple, liste și alte elemente de formatare.",
+                "De exemplu, am putea discuta despre impactul asupra TVA, impozitului pe profit și alte taxe relevante pentru mediul de afaceri din România. Este esențial ca fiecare companie să înțeleagă aceste schimbări pentru a rămâne conformă și pentru a optimiza structura fiscală."
+            ]
+        },
+        {
+            "slug": "protectia-proprietatii-intelectuale-in-era-digitala",
+            "title": "Protecția Proprietății Intelectuale în Era Digitală",
+            "date": "18 Iulie 2024",
+            "excerpt": "Strategii esențiale pentru a vă proteja activele digitale și mărcile comerciale online...",
+            "imageUrl": "https://i.postimg.cc/Jz3xLpF8/tingey-injury-law-firm-y-Cd-S-L3-T-0-I-unsplash.jpg",
+            "imageHint": "digital security",
+            "content": [
+                "Strategii esențiale pentru a vă proteja activele digitale și mărcile comerciale online...",
+                "În lumea digitală de astăzi, protejarea proprietății intelectuale este mai importantă ca niciodată. Acest articol explorează pașii pe care îi puteți lua pentru a vă asigura că marca, conținutul și inovațiile dvs. sunt protejate legal împotriva utilizării neautorizate."
+            ]
+        },
+        {
+            "slug": "ghidul-complet-al-tranzactiilor-imobiliare",
+            "title": "Ghidul Complet al Tranzacțiilor Imobiliare",
+            "date": "10 Iulie 2024",
+            "excerpt": "Pașii cheie și capcanele de evitat atunci când cumpărați sau vindeți proprietăți comerciale...",
+            "imageUrl": "https://i.postimg.cc/d0pW12M4/maria-ziegler-j-K9-I8-Kq-DC-A-unsplash.jpg",
+            "imageHint": "real estate",
+            "content": [
+                "Pașii cheie și capcanele de evitat atunci când cumpărați sau vindeți proprietăți comerciale...",
+                "Tranzacțiile imobiliare pot fi complexe și pline de riscuri. Acest ghid vă oferă o perspectivă clară asupra procesului, de la due diligence la negocierea contractului și închiderea tranzacției, pentru a vă ajuta să navigați cu încredere pe piața imobiliară."
+            ]
+        }
+    ]
+}
+
+    

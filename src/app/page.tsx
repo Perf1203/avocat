@@ -20,7 +20,7 @@ import {
   FileText
 } from "lucide-react";
 import Link from "next/link";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, query, orderBy } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -78,12 +78,7 @@ const defaultContent = {
     },
     blog: {
         title: "Noutăți & Analize",
-        subtitle: "Articole Recente",
-        posts: [
-            { id: 1, slug: "navigarea-modificarilor-legislative-din-2024", title: "Navigarea Modificărilor Legislative din 2024", date: "25 Iulie 2024", excerpt: "O analiză detaliată a noilor reglementări fiscale și cum acestea vă pot afecta afacerea...", imageUrl: "https://i.postimg.cc/tJ08L4fQ/scott-graham-OQMZw-Nd3-Th-U-unsplash.jpg", imageHint: "law books" },
-            { id: 2, slug: "protectia-proprietatii-intelectuale-in-era-digitala", title: "Protecția Proprietății Intelectuale în Era Digitală", date: "18 Iulie 2024", excerpt: "Strategii esențiale pentru a vă proteja activele digitale și mărcile comerciale online...", imageUrl: "https://i.postimg.cc/Jz3xLpF8/tingey-injury-law-firm-y-Cd-S-L3-T-0-I-unsplash.jpg", imageHint: "digital security" },
-            { id: 3, slug: "ghidul-complet-al-tranzactiilor-imobiliare", title: "Ghidul Complet al Tranzacțiilor Imobiliare", date: "10 Iulie 2024", excerpt: "Pașii cheie și capcanele de evitat atunci când cumpărați sau vindeți proprietăți comerciale...", imageUrl: "https://i.postimg.cc/d0pW12M4/maria-ziegler-j-K9-I8-Kq-DC-A-unsplash.jpg", imageHint: "real estate" }
-        ]
+        subtitle: "Articole Recente"
     }
 };
 
@@ -107,6 +102,9 @@ export default function Home() {
   
   const pricesCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, "consultation_prices") : null, [firestore]);
   const { data: pricesData, isLoading: arePricesLoading } = useCollection(pricesCollectionRef);
+  
+  const blogPostsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "blog_posts"), orderBy("date", "desc")) : null, [firestore]);
+  const { data: blogPosts, isLoading: areBlogPostsLoading } = useCollection(blogPostsQuery);
 
   const [content, setContent] = useState(defaultContent);
   const [prices, setPrices] = useState<any[]>([]);
@@ -355,25 +353,33 @@ export default function Home() {
                     </h2>
                 </div>
                 <div className="mt-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {content.blog.posts.map((post) => (
-                        <Card key={post.id} className="overflow-hidden flex flex-col">
-                           <div className="h-56 relative w-full">
-                             <Image src={post.imageUrl || ""} alt={post.title} fill className="object-cover" data-ai-hint={post.imageHint} />
-                           </div>
-                            <CardHeader>
-                                <p className="text-sm text-muted-foreground">{post.date}</p>
-                                <CardTitle className="font-headline text-xl">{post.title}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                                <p className="text-muted-foreground">{post.excerpt}</p>
-                            </CardContent>
-                            <CardFooter>
-                                <Button asChild variant="link" className="p-0">
-                                  <Link href={`/blog/${post.slug}`}>Citește mai mult</Link>
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    ))}
+                     {areBlogPostsLoading ? (
+                        [...Array(3)].map((_, i) => (
+                            <Card key={i} className="overflow-hidden flex flex-col"><Skeleton className="h-full w-full"/></Card>
+                        ))
+                    ) : blogPosts && blogPosts.length > 0 ? (
+                        blogPosts.map((post: any) => (
+                            <Card key={post.id} className="overflow-hidden flex flex-col">
+                               <div className="h-56 relative w-full">
+                                 <Image src={post.imageUrl || ""} alt={post.title} fill className="object-cover" data-ai-hint={post.imageHint} />
+                               </div>
+                                <CardHeader>
+                                    <p className="text-sm text-muted-foreground">{post.date}</p>
+                                    <CardTitle className="font-headline text-xl">{post.title}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                    <p className="text-muted-foreground">{post.excerpt}</p>
+                                </CardContent>
+                                <CardFooter>
+                                    <Button asChild variant="link" className="p-0">
+                                      <Link href={`/blog/${post.slug}`}>Citește mai mult</Link>
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        ))
+                    ) : (
+                         <p className="col-span-full text-center text-muted-foreground">Nu există articole de blog.</p>
+                    )}
                 </div>
             </div>
         </section>
@@ -424,3 +430,5 @@ export default function Home() {
     </>
   );
 }
+
+    

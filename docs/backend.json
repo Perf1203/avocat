@@ -1,6 +1,38 @@
 
 {
   "entities": {
+    "BlogPost": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BlogPost",
+      "type": "object",
+      "description": "Represents a single blog post article.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the blog post." },
+        "slug": { "type": "string", "description": "URL-friendly identifier for the blog post." },
+        "title": { "type": "string", "description": "The title of the blog post." },
+        "content": { "type": "array", "items": { "type": "string" }, "description": "The content of the blog post, as an array of paragraphs." },
+        "imageUrl": { "type": "string", "format": "uri", "description": "URL for the main image of the blog post." },
+        "imageHint": { "type": "string", "description": "Hint for AI image generation." },
+        "date": { "type": "string", "description": "Publication date of the blog post." },
+        "excerpt": { "type": "string", "description": "A short summary of the blog post." }
+      },
+      "required": ["id", "slug", "title", "content", "imageUrl", "date", "excerpt"]
+    },
+     "BlogComment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BlogComment",
+      "type": "object",
+      "description": "Represents a comment on a blog post.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the comment." },
+        "postId": { "type": "string", "description": "The ID of the blog post this comment belongs to." },
+        "authorId": { "type": "string", "description": "The UID of the comment author." },
+        "authorName": { "type": "string", "description": "The name of the comment author." },
+        "text": { "type": "string", "description": "The text content of the comment." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Timestamp when the comment was posted." }
+      },
+      "required": ["postId", "authorId", "authorName", "text", "timestamp"]
+    },
     "Appointment": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Appointment",
@@ -348,6 +380,36 @@
               "name": "appointmentId",
               "description": "The unique identifier for the appointment."
             }
+          ]
+        }
+      },
+       {
+        "path": "/blog_posts/{postId}",
+        "definition": {
+          "entityName": "BlogPost",
+          "schema": {
+            "$ref": "#/backend/entities/BlogPost"
+          },
+          "description": "Stores individual blog posts. Publicly readable, admin-writable.",
+          "params": [
+            {
+              "name": "postId",
+              "description": "The unique identifier for the blog post."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/blog_posts/{postId}/comments/{commentId}",
+        "definition": {
+          "entityName": "BlogComment",
+          "schema": {
+            "$ref": "#/backend/entities/BlogComment"
+          },
+          "description": "Stores comments for a specific blog post. Requires authentication to write.",
+          "params": [
+            { "name": "postId", "description": "The blog post ID." },
+            { "name": "commentId", "description": "The comment ID." }
           ]
         }
       },
