@@ -241,6 +241,10 @@
         "identificationRequested": {
             "type": "boolean",
             "description": "Flag set by admin to request guest identification."
+        },
+        "isBlocked": {
+          "type": "boolean",
+          "description": "If true, the guest associated with this conversation is blocked from using the chat."
         }
       },
       "required": ["guestId", "adminId", "createdAt", "lastMessageAt"]

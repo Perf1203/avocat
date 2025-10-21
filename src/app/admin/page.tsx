@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Trash2, Settings, Clock, MessageSquare, CircleUserRound } from 'lucide-react';
+import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -126,8 +126,7 @@ export default function AdminPage() {
 
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !isUserAdmin) return null;
-    const coll = collection(firestore, 'appointments');
-    return query(coll, orderBy('startTime', 'desc'));
+    return collection(firestore, 'appointments');
   }, [firestore, isUserAdmin]);
 
   const {
@@ -151,6 +150,27 @@ export default function AdminPage() {
   const { data: conversations, isLoading: isLoadingConversations } = useCollection(conversationsQuery);
   
   const showLoading = isUserLoading || isLoadingRole;
+
+  const handleChatDelete = (conversationId: string) => {
+    if (!firestore) return;
+    const docRef = doc(firestore, 'conversations', conversationId);
+    // Here you might want to delete subcollections too, but for now we just delete the main doc
+    deleteDocumentNonBlocking(docRef);
+    toast({
+        title: 'Conversație ștearsă',
+        description: `Conversația a fost ștearsă cu succes.`,
+    });
+  };
+
+  const handleChatBlockToggle = (conversationId: string, isCurrentlyBlocked: boolean) => {
+    if (!firestore) return;
+    const docRef = doc(firestore, 'conversations', conversationId);
+    updateDocumentNonBlocking(docRef, { isBlocked: !isCurrentlyBlocked });
+    toast({
+        title: `Conversație ${!isCurrentlyBlocked ? 'Blocată' : 'Deblocată'}`,
+        description: `Vizitatorul a fost ${!isCurrentlyBlocked ? 'blocat' : 'deblocat'}.`,
+    });
+  };
 
   const handleDelete = (collectionName: string, docId: string) => {
     if (!firestore) return;
@@ -280,12 +300,12 @@ export default function AdminPage() {
                       <TableHead>Vizitator</TableHead>
                       <TableHead>Ultimul Mesaj</TableHead>
                       <TableHead>Data</TableHead>
-                      <TableHead className="text-right">Acțiune</TableHead>
+                      <TableHead className="text-right">Acțiuni</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {conversations.map((convo: any) => (
-                      <TableRow key={convo.id}>
+                      <TableRow key={convo.id} className={cn(convo.isBlocked && "bg-muted/50")}>
                         <TableCell>
                             <div className="font-medium flex items-center gap-2">
                                 <CircleUserRound className="text-muted-foreground"/>
@@ -297,10 +317,35 @@ export default function AdminPage() {
                         </TableCell>
                         <TableCell className="text-muted-foreground truncate max-w-xs">{convo.lastMessageText}</TableCell>
                         <TableCell>{convo.lastMessageAt && format(convo.lastMessageAt.toDate(), 'PPP p')}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right space-x-1">
                           <Button asChild variant="outline" size="sm">
                             <Link href={`/admin/chat/${convo.id}`}>Răspunde</Link>
                           </Button>
+                           <Button variant="ghost" size="icon" onClick={() => handleChatBlockToggle(convo.id, convo.isBlocked)}>
+                                <Ban className={cn("h-4 w-4", convo.isBlocked ? "text-primary" : "text-muted-foreground")} />
+                                <span className="sr-only">{convo.isBlocked ? 'Deblochează' : 'Blochează'}</span>
+                            </Button>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Ești sigur?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Această acțiune nu poate fi anulată. Aceasta va șterge permanent conversația.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Anulează</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleChatDelete(convo.id)}>
+                                      Șterge
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                         </TableCell>
                       </TableRow>
                     ))}

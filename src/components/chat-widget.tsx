@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { MessageSquare, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { useFirebase, useDoc, useMemoFirebase, useAuth, useUser } from '@/firebase';
@@ -17,12 +17,28 @@ export function ChatWidget() {
   const { user, isUserLoading } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const [isAuthInProgress, setIsAuthInProgress] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedId = localStorage.getItem('conversationId');
+    if (storedId) {
+      setConversationId(storedId);
+    }
+  }, []);
 
   const settingsRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'admin_settings', 'schedule') : null),
     [firestore]
   );
   const { data: settings, isLoading: isLoadingSettings } = useDoc(settingsRef);
+
+  const conversationRef = useMemoFirebase(() => {
+    if (!firestore || !conversationId) return null;
+    return doc(firestore, 'conversations', conversationId);
+  }, [firestore, conversationId]);
+
+  const { data: conversation, isLoading: isLoadingConversation } = useDoc(conversationRef);
+  const isBlocked = conversation?.isBlocked === true;
 
   const openChat = useCallback((currentUser: User | null) => {
     if (!settings || !currentUser) return;
@@ -38,14 +54,11 @@ export function ChatWidget() {
 
   const handleToggle = useCallback(async () => {
     if (user) {
-      // If user is already signed in, just open chat
       openChat(user);
     } else if (!isUserLoading && !isAuthInProgress) {
-      // If not signed in, start anonymous sign-in
       setIsAuthInProgress(true);
       try {
         const userCredential = await signInAnonymously(auth);
-        // After successful sign-in, open the chat
         openChat(userCredential.user);
       } catch (error) {
         console.error("Anonymous sign-in failed", error);
@@ -61,7 +74,7 @@ export function ChatWidget() {
     return <MessageSquare className="h-6 w-6" />;
   };
 
-  if (isLoadingSettings || !settings?.isChatEnabled) {
+  if (isLoadingSettings || !settings?.isChatEnabled || isBlocked || isLoadingConversation) {
     return null;
   }
 
