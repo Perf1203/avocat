@@ -388,7 +388,11 @@ export default function ConfigureLandingPage() {
                                {pricesData?.map((price: any) => (
                                     <Card key={price.id} className="flex items-center gap-4 p-4">
                                         <div className="flex-1">
-                                            <p className="font-semibold">{price.title} - <span className="text-sm font-bold text-primary">{price.flatRate ? `${price.flatRate} €` : `${price.pricePerHour} €/oră`}</span></p>
+                                            <p className="font-semibold">{price.title} - 
+                                                <span className="text-sm font-bold text-primary">
+                                                    {price.type === 'flat' ? `${price.flatRate} €` : `${price.pricePerHour} €/oră`}
+                                                </span>
+                                            </p>
                                             <p className="text-sm text-foreground/80">{price.description}</p>
                                         </div>
                                         <div className="flex items-center gap-1">

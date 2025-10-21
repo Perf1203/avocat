@@ -334,7 +334,6 @@ export default function Home() {
                         <Card key={price.id} className="flex flex-col">
                             <CardHeader>
                                 <CardTitle className="font-headline text-xl flex items-center gap-2">
-                                    {price.type === 'flat' ? <Euro/> : <FileText />}
                                     {price.title}
                                 </CardTitle>
                             </CardHeader>
