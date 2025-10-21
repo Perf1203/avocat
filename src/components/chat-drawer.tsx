@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, LogOut } from 'lucide-react';
+import { Send, LogOut, User as UserIcon, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { Label } from './ui/label';
 
 interface ChatDrawerProps {
   isOpen: boolean;
@@ -27,9 +28,12 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   const [message, setMessage] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  // Guest identification state
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
 
   useEffect(() => {
-    // Sync conversationId with localStorage on component mount
     const storedConversationId = localStorage.getItem('conversationId');
     if (storedConversationId) {
       setConversationId(storedConversationId);
@@ -81,19 +85,16 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     let currentConversationId = conversationId;
 
     if (!currentConversationId) {
-        // Create a new conversation if one doesn't exist
-        const adminQuery = query(collection(firestore, 'roles_admin'), where('isAdmin', '==', true), limit(1));
-        const adminSnapshot = await getDocs(adminQuery);
-        const adminId = !adminSnapshot.empty ? adminSnapshot.docs[0].id : 'default-admin-id';
-
         const newConversationRef = doc(collection(firestore, 'conversations'));
         const newConvoData = {
             guestId: user.uid,
-            adminId: adminId, 
+            adminId: 'default-admin-id',
             createdAt: serverTimestamp(),
             lastMessageAt: serverTimestamp(),
             lastMessageText: message,
             isReadByAdmin: false,
+            guestName: guestName || 'Vizitator Anonim',
+            guestEmail: guestEmail || '',
         };
         await setDoc(newConversationRef, newConvoData);
         currentConversationId = newConversationRef.id;
@@ -108,7 +109,6 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
       timestamp: serverTimestamp(),
     });
     
-    // Update last message on conversation
     const convoRef = doc(firestore, 'conversations', currentConversationId);
     await setDoc(convoRef, {
         lastMessageAt: serverTimestamp(),
@@ -118,6 +118,27 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
 
     setMessage('');
   };
+
+  const renderInitialView = () => (
+    <div className="p-4 space-y-4">
+        <h3 className="font-semibold text-center">Identificare Opțională</h3>
+        <div className="space-y-2">
+            <Label htmlFor="guest-name">Nume</Label>
+            <div className="relative">
+                <UserIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input id="guest-name" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Numele dvs..." className="pl-8" />
+            </div>
+        </div>
+        <div className="space-y-2">
+            <Label htmlFor="guest-email">Email</Label>
+            <div className="relative">
+                 <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input id="guest-email" type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="email@exemplu.com" className="pl-8" />
+            </div>
+        </div>
+        <p className="text-xs text-muted-foreground text-center pt-2">Vă rugăm să scrieți primul mesaj mai jos pentru a începe conversația.</p>
+    </div>
+  );
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -133,6 +154,7 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
            </Button>
         </SheetHeader>
         <ScrollArea className="flex-1" ref={scrollAreaRef}>
+            { !conversationId && renderInitialView() }
             <div className="p-4 space-y-4">
             {messages && messages.map((msg: any) => (
                 <div

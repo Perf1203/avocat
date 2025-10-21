@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useFirebase, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, orderBy, doc, arrayUnion, arrayRemove, where } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import {
   Table,
@@ -144,9 +144,9 @@ export default function AdminPage() {
   const { data: clients, isLoading: isLoadingClients, error: clientsError } = useCollection(clientsQuery);
   
     const conversationsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!firestore || !user?.uid || !isUserAdmin || isLoadingRole) return null;
     return query(collection(firestore, "conversations"), orderBy("lastMessageAt", "desc"));
-  }, [firestore, user?.uid]);
+  }, [firestore, user?.uid, isUserAdmin, isLoadingRole]);
 
   const { data: conversations, isLoading: isLoadingConversations } = useCollection(conversationsQuery);
   
@@ -289,7 +289,10 @@ export default function AdminPage() {
                         <TableCell>
                             <div className="font-medium flex items-center gap-2">
                                 <CircleUserRound className="text-muted-foreground"/>
-                                <span>{convo.guestId.substring(0, 8)}...</span>
+                                <div className="flex flex-col">
+                                    <span>{convo.guestName || `Vizitator`}</span>
+                                    <span className="text-xs text-muted-foreground">{convo.guestEmail || convo.guestId.substring(0,8)+'...'}</span>
+                                </div>
                             </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground truncate max-w-xs">{convo.lastMessageText}</TableCell>
@@ -641,5 +644,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    

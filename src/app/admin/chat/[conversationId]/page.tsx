@@ -88,6 +88,9 @@ export default function ChatConversationPage() {
     return <div className="container py-12"><Skeleton className="h-[70vh] w-full" /></div>;
   }
 
+  const guestDisplayName = conversation?.guestName || 'Vizitator';
+  const guestDisplayInfo = conversation?.guestEmail || (conversation?.guestId ? `${conversation.guestId.substring(0, 12)}...` : '');
+
   return (
     <div className="container py-12">
       <Card className="mx-auto max-w-3xl h-[calc(100vh-12rem)] flex flex-col">
@@ -102,8 +105,8 @@ export default function ChatConversationPage() {
                 <AvatarFallback><CircleUserRound /></AvatarFallback>
              </Avatar>
              <div>
-                <CardTitle>Conversație cu Vizitator</CardTitle>
-                <p className="text-xs text-muted-foreground">{conversation?.guestId.substring(0, 12)}...</p>
+                <CardTitle>Conversație cu {guestDisplayName}</CardTitle>
+                {guestDisplayInfo && <p className="text-xs text-muted-foreground">{guestDisplayInfo}</p>}
              </div>
           </div>
         </CardHeader>
@@ -166,5 +169,3 @@ export default function ChatConversationPage() {
     </div>
   );
 }
-
-    
