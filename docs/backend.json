@@ -237,6 +237,10 @@
           "type": "string",
           "format": "email",
           "description": "The optional email provided by the guest."
+        },
+        "identificationRequested": {
+            "type": "boolean",
+            "description": "Flag set by admin to request guest identification."
         }
       },
       "required": ["guestId", "adminId", "createdAt", "lastMessageAt"]
@@ -436,3 +440,5 @@
     "reasoning": "The Firestore structure is designed to accommodate the application's requirements for appointment scheduling, landing page content management, and dynamic content suggestions. It prioritizes authorization independence and supports secure list operations (QAPs). \n\n1.  **Authorization Independence:** Access to appointments is controlled through path-based ownership. Each client's appointments are stored under their own document (`/clients/{clientId}/appointments/{appointmentId}`). Administrative access is granted via the `/roles_admin/{uid}` collection.  This eliminates the need for `get()` calls in security rules, ensuring atomic operations.\n\n2.  **Structural Segregation:**  `ConsultationPrice`, `LandingPageContent` and `AppSettings` are placed in separate collections with distinct security profiles.  This ensures that data with different access needs is not mixed, simplifying security rules.\n\n3.  **Access Modeling:**  Path-based ownership is employed for `Client` and `Appointment` data. The `roles_admin` collection uses existence-based global roles.\n\n4.  **QAPs (Rules Are Not Filters):** Segregating data based on ownership allows for efficient and secure list operations. For instance, a client can only list appointments under their `clientId`, and admins can list all appointments.\n\nDenormalization is not explicitly required in this design because path-based ownership provides sufficient authorization context without needing to copy data. If, in the future, more complex authorization schemes are introduced (e.g., sharing appointments with other users), denormalization of a `members` map into the `/clients/{clientId}/appointments/{appointmentId}` collection would be necessary."
   }
 }
+
+    

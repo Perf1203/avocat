@@ -2,12 +2,12 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, LogOut, User as UserIcon, Mail } from 'lucide-react';
+import { Send, LogOut, User as UserIcon, Mail, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { useFirebase, useUser, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, serverTimestamp, setDoc, where, getDocs, limit } from 'firebase/firestore';
+import { useFirebase, useUser, useAuth, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc, addDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
@@ -29,7 +29,8 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  // Guest identification state
+  // Identification state
+  const [showIdentification, setShowIdentification] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
 
@@ -39,6 +40,19 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
       setConversationId(storedConversationId);
     }
   }, []);
+  
+  const conversationRef = useMemoFirebase(() => {
+    if (!firestore || !conversationId) return null;
+    return doc(firestore, 'conversations', conversationId);
+  }, [firestore, conversationId]);
+
+  const { data: conversation } = useDoc(conversationRef);
+
+  useEffect(() => {
+    if (conversation?.identificationRequested) {
+        setShowIdentification(true);
+    }
+  }, [conversation]);
 
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !conversationId) return null;
@@ -55,14 +69,19 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
         }
       }, 100);
     }
-  }, [messages]);
+  }, [messages, showIdentification]);
   
   const handleLeaveChat = async () => {
     if (!auth) return;
     try {
-      await signOut(auth);
+      if (auth.currentUser && auth.currentUser.isAnonymous) {
+          await signOut(auth);
+      }
       localStorage.removeItem('conversationId');
       setConversationId(null);
+      setGuestName('');
+      setGuestEmail('');
+      setShowIdentification(false);
       onOpenChange(false);
        toast({
         title: 'Chat încheiat',
@@ -77,6 +96,28 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
       });
     }
   };
+  
+  const handleStartConversation = async () => {
+      if (!firestore || !user) return;
+      
+      const newConversationRef = doc(collection(firestore, 'conversations'));
+      const newConvoData = {
+            guestId: user.uid,
+            adminId: 'default-admin-id',
+            createdAt: serverTimestamp(),
+            lastMessageAt: serverTimestamp(),
+            lastMessageText: message || 'Conversație nouă începută',
+            isReadByAdmin: false,
+            guestName: '',
+            guestEmail: '',
+            identificationRequested: false,
+        };
+        await setDoc(newConversationRef, newConvoData);
+        const newConversationId = newConversationRef.id;
+        setConversationId(newConversationId);
+        localStorage.setItem('conversationId', newConversationId);
+        return newConversationId;
+  }
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,21 +126,8 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     let currentConversationId = conversationId;
 
     if (!currentConversationId) {
-        const newConversationRef = doc(collection(firestore, 'conversations'));
-        const newConvoData = {
-            guestId: user.uid,
-            adminId: 'default-admin-id',
-            createdAt: serverTimestamp(),
-            lastMessageAt: serverTimestamp(),
-            lastMessageText: message,
-            isReadByAdmin: false,
-            guestName: guestName || 'Vizitator Anonim',
-            guestEmail: guestEmail || '',
-        };
-        await setDoc(newConversationRef, newConvoData);
-        currentConversationId = newConversationRef.id;
-        setConversationId(currentConversationId);
-        localStorage.setItem('conversationId', currentConversationId);
+        currentConversationId = await handleStartConversation();
+        if (!currentConversationId) return;
     }
 
     const messagesCol = collection(firestore, 'conversations', currentConversationId, 'messages');
@@ -119,9 +147,26 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     setMessage('');
   };
 
-  const renderInitialView = () => (
-    <div className="p-4 space-y-4">
-        <h3 className="font-semibold text-center">Identificare Opțională</h3>
+  const handleSaveIdentification = () => {
+    if (!conversationRef) return;
+    
+    const identificationData: { guestName?: string; guestEmail?: string, identificationRequested?: boolean } = {};
+    if (guestName) identificationData.guestName = guestName;
+    if (guestEmail) identificationData.guestEmail = guestEmail;
+    identificationData.identificationRequested = false; // Reset request flag
+
+    updateDocumentNonBlocking(conversationRef, identificationData);
+    
+    toast({
+        title: 'Informații salvate',
+        description: 'Numele și emailul dvs. au fost salvate.'
+    });
+    setShowIdentification(false);
+  }
+
+  const renderIdentificationForm = () => (
+    <div className="p-4 space-y-4 border-b">
+        <h3 className="font-semibold text-center text-sm text-muted-foreground">Identificare Opțională</h3>
         <div className="space-y-2">
             <Label htmlFor="guest-name">Nume</Label>
             <div className="relative">
@@ -136,7 +181,10 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
                 <Input id="guest-email" type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="email@exemplu.com" className="pl-8" />
             </div>
         </div>
-        <p className="text-xs text-muted-foreground text-center pt-2">Vă rugăm să scrieți primul mesaj mai jos pentru a începe conversația.</p>
+        <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setShowIdentification(false)}>Anulează</Button>
+            <Button onClick={handleSaveIdentification}>Salvează</Button>
+        </div>
     </div>
   );
 
@@ -150,11 +198,19 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
           </div>
            <Button variant="ghost" size="sm" onClick={handleLeaveChat}>
              <LogOut className="mr-2 h-4 w-4"/>
-             Părăsiți chat
+             Părăsiți
            </Button>
         </SheetHeader>
         <ScrollArea className="flex-1" ref={scrollAreaRef}>
-            { !conversationId && renderInitialView() }
+             { !conversation?.guestName && !showIdentification && (
+                <div className="p-2 text-center">
+                    <Button variant="link" size="sm" onClick={() => setShowIdentification(true)}>
+                        <Info className="mr-2 h-4 w-4" />
+                        Mă identific
+                    </Button>
+                </div>
+            )}
+            { showIdentification && renderIdentificationForm() }
             <div className="p-4 space-y-4">
             {messages && messages.map((msg: any) => (
                 <div
@@ -201,3 +257,5 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     </Sheet>
   );
 }
+
+    
