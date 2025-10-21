@@ -18,7 +18,8 @@ import {
   Award,
   MessageCircle,
   Euro,
-  FileText
+  FileText,
+  type LucideIcon
 } from "lucide-react";
 import Link from "next/link";
 import { collection, doc, query, orderBy } from "firebase/firestore";
@@ -34,6 +35,7 @@ import {
 import { useFirebase, useUser, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import * as LucideIcons from 'lucide-react';
 
 // Default Content
 const defaultContent = {
@@ -60,11 +62,6 @@ const defaultContent = {
     practiceAreas: {
         title: "Domeniile noastre de Practică",
         description: "Oferim rezultate excepționale într-o gamă largă de domenii juridice, asigurând o acoperire completă pentru nevoile clienților noștri.",
-        areas: [
-            { icon: "Gavel", title: "Drept Corporativ", description: "Consultanță de specialitate privind fuziuni, achiziții și guvernanță corporativă pentru a vă proteja și dezvolta afacerea." },
-            { icon: "Landmark", title: "Drept Imobiliar", description: "Navigarea tranzacțiilor imobiliare complexe, de la închirieri comerciale la achiziții de proprietăți." },
-            { icon: "BookOpen", title: "Proprietate Intelectuală", description: "Protejarea inovațiilor și creațiilor dvs. cu strategii solide de brevetare, mărci comerciale și drepturi de autor." },
-        ]
     },
     pricing: {
         title: "Consultanță Transparentă",
@@ -83,8 +80,9 @@ const defaultContent = {
     }
 };
 
-const iconMap: { [key: string]: React.ElementType } = {
-  Gavel, Landmark, BookOpen, PenSquare, Sparkles, Wand2, Phone, Mail, MapPin, TrendingUp, Users, Award, MessageCircle, Euro, FileText
+const iconMap: { [key: string]: LucideIcon } = {
+  Gavel, Landmark, BookOpen, PenSquare, Sparkles, Wand2, Phone, Mail, MapPin, TrendingUp, Users, Award, MessageCircle, Euro, FileText,
+  ...LucideIcons
 };
 
 export default function Home() {
@@ -106,6 +104,9 @@ export default function Home() {
   
   const testimonialsCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, "testimonials") : null, [firestore]);
   const { data: testimonialsData, isLoading: areTestimonialsLoading } = useCollection(testimonialsCollectionRef);
+
+  const practiceAreasCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, 'practice_areas') : null, [firestore]);
+  const { data: practiceAreasData, isLoading: arePracticeAreasLoading } = useCollection(practiceAreasCollectionRef);
   
   const blogPostsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "blog_posts"), orderBy("date", "desc")) : null, [firestore]);
   const { data: blogPosts, isLoading: areBlogPostsLoading } = useCollection(blogPostsQuery);
@@ -132,7 +133,7 @@ export default function Home() {
   
   const AreaIcon = ({ name }: { name: string }) => {
     const Icon = iconMap[name];
-    return Icon ? <Icon className="h-10 w-10 text-primary" /> : null;
+    return Icon ? <Icon className="h-10 w-10 text-primary" /> : <Gavel className="h-10 w-10 text-primary" />;
   }
 
   const isLoading = isContentLoading || isLoadingRole;
@@ -250,15 +251,23 @@ export default function Home() {
               </p>
             </div>
             <div className="mt-20 grid grid-cols-1 gap-12 md:grid-cols-3">
-              {content.practiceAreas.areas.map((area) => (
-                <div key={area.title} className="text-center">
-                  <div className="flex justify-center mb-4"><AreaIcon name={area.icon}/></div>
-                  <h3 className="font-headline text-xl font-semibold">{area.title}</h3>
-                  <p className="mt-2 text-muted-foreground">
-                    {area.description}
-                  </p>
-                </div>
-              ))}
+              {arePracticeAreasLoading ? (
+                 [...Array(3)].map((_, i) => (
+                    <div key={i} className="text-center p-4"><Skeleton className="h-48 w-full"/></div>
+                ))
+              ) : practiceAreasData && practiceAreasData.length > 0 ? (
+                practiceAreasData.map((area: any) => (
+                    <div key={area.id} className="text-center">
+                    <div className="flex justify-center mb-4"><AreaIcon name={area.icon}/></div>
+                    <h3 className="font-headline text-xl font-semibold">{area.title}</h3>
+                    <p className="mt-2 text-muted-foreground">
+                        {area.description}
+                    </p>
+                    </div>
+                ))
+              ) : (
+                <p className="col-span-full text-center text-muted-foreground">Nu există servicii adăugate.</p>
+              )}
             </div>
           </div>
         </section>
@@ -325,14 +334,14 @@ export default function Home() {
                         <Card key={price.id} className="flex flex-col">
                             <CardHeader>
                                 <CardTitle className="font-headline text-2xl flex items-center gap-2">
-                                    {price.flatRate ? <Euro/> : <FileText />}
-                                    {price.description}
+                                    {price.type === 'flat' ? <Euro/> : <FileText />}
+                                    {price.title}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="flex-grow">
                                 {price.flatRate && <p className="text-4xl font-bold mb-2">{price.flatRate} €</p>}
                                 {price.pricePerHour && <p className="text-4xl font-bold mb-2">{price.pricePerHour} €<span className="text-lg font-normal text-muted-foreground">/oră</span></p>}
-                                <p className="text-muted-foreground">{price.flatRate ? "Taxă unică pentru o consultație completă." : "Perfect pentru consultanță continuă."}</p>
+                                <p className="text-muted-foreground">{price.description}</p>
                             </CardContent>
                             <CardFooter>
                                 <Button asChild className="w-full">

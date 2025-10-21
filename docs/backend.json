@@ -47,6 +47,19 @@
       },
       "required": ["quote", "author", "title"]
     },
+    "PracticeArea": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PracticeArea",
+      "type": "object",
+      "description": "Represents a legal practice area.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the practice area." },
+        "icon": { "type": "string", "description": "The name of the lucide-react icon to display." },
+        "title": { "type": "string", "description": "The title of the practice area." },
+        "description": { "type": "string", "description": "A short description of the practice area." }
+      },
+      "required": ["icon", "title", "description"]
+    },
     "Appointment": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Appointment",
@@ -142,14 +155,21 @@
           "type": "number",
           "description": "A flat rate charged for a consultation, regardless of duration."
         },
+        "title": {
+          "type": "string",
+          "description": "Title of the pricing plan (e.g., 'Consultație Inițială')."
+        },
         "description": {
           "type": "string",
           "description": "Description of the pricing structure."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["flat", "hourly"],
+          "description": "Type of pricing."
         }
       },
-      "required": [
-        "id"
-      ]
+      "required": [ "id", "title", "description", "type" ]
     },
     "LandingPageContent": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -457,6 +477,19 @@
         }
       },
       {
+        "path": "/practice_areas/{areaId}",
+        "definition": {
+          "entityName": "PracticeArea",
+          "schema": {
+            "$ref": "#/backend/entities/PracticeArea"
+          },
+          "description": "Stores individual practice areas for the landing page. Publicly readable, admin-writable.",
+          "params": [
+            { "name": "areaId", "description": "The unique ID for the practice area." }
+          ]
+        }
+      },
+      {
         "path": "/landing_page_content/{contentId}",
         "definition": {
           "entityName": "LandingPageContent",
@@ -557,8 +590,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to accommodate the application's requirements for appointment scheduling, landing page content management, and dynamic content suggestions. It prioritizes authorization independence and supports secure list operations (QAPs). \n\n1.  **Authorization Independence:** Access to appointments is controlled through path-based ownership. Each client's appointments are stored under their own document (`/clients/{clientId}/appointments/{appointmentId}`). Administrative access is granted via the `/roles_admin/{uid}` collection.  This eliminates the need for `get()` calls in security rules, ensuring atomic operations.\n\n2.  **Structural Segregation:**  `ConsultationPrice`, `LandingPageContent` and `AppSettings` are placed in separate collections with distinct security profiles.  This ensures that data with different access needs is not mixed, simplifying security rules.\n\n3.  **Access Modeling:**  Path-based ownership is employed for `Client` and `Appointment` data. The `roles_admin` collection uses existence-based global roles.\n\n4.  **QAPs (Rules Are Not Filters):** Segregating data based on ownership allows for efficient and secure list operations. For instance, a client can only list appointments under their `clientId`, and admins can list all appointments.\n\nDenormalization is not explicitly required in this design because path-based ownership provides sufficient authorization context without needing to copy data. If, in the future, more complex authorization schemes are introduced (e.g., sharing appointments with other users), denormalization of a `members` map into the `/clients/{clientId}/appointments/{appointmentId}` collection would be necessary."
+    "reasoning": "The Firestore structure is designed to accommodate the application's requirements for appointment scheduling, landing page content management, and dynamic content suggestions. It prioritizes authorization independence and supports secure list operations (QAPs). \n\n1.  **Authorization Independence:** Access to appointments is controlled through path-based ownership. Each client's appointments are stored under their own document (`/clients/{clientId}/appointments/{appointmentId}`). Administrative access is granted via the `/roles_admin/{uid}` collection.  This eliminates the need for `get()` calls in security rules, ensuring atomic operations.\n\n2.  **Structural Segregation:**  `ConsultationPrice`, `LandingPageContent`, `AppSettings`, `Testimonial`, and `PracticeArea` are placed in separate collections with distinct security profiles. This ensures that data with different access needs is not mixed, simplifying security rules.\n\n3.  **Access Modeling:**  Path-based ownership is employed for `Client` and `Appointment` data. The `roles_admin` collection uses existence-based global roles.\n\n4.  **QAPs (Rules Are Not Filters):** Segregating data based on ownership allows for efficient and secure list operations. For instance, a client can only list appointments under their `clientId`, and admins can list all appointments.\n\nDenormalization is not explicitly required in this design because path-based ownership provides sufficient authorization context without needing to copy data. If, in the future, more complex authorization schemes are introduced (e.g., sharing appointments with other users), denormalization of a `members` map into the `/clients/{clientId}/appointments/{appointmentId}` collection would be necessary."
   }
 }
-
-    

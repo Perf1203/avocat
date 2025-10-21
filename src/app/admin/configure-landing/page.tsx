@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { ArrowLeft, Wand2, PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Wand2, PlusCircle, Edit, Trash2, type LucideIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { ContentSuggestionTool } from '@/components/content-suggestion-tool';
@@ -35,6 +35,16 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PriceDialog } from '@/components/price-dialog';
+import { PracticeAreaDialog } from '@/components/practice-area-dialog';
+import * as LucideIcons from 'lucide-react';
+
+const iconMap: { [key: string]: LucideIcon } = LucideIcons;
+
+const AreaIcon = ({ name }: { name: string }) => {
+    const Icon = iconMap[name];
+    return Icon ? <Icon className="h-5 w-5 text-primary" /> : null;
+};
 
 
 export default function ConfigureLandingPage() {
@@ -47,9 +57,13 @@ export default function ConfigureLandingPage() {
     const [content, setContent] = useState<any>({});
     const [showSuggestionTool, setShowSuggestionTool] = useState(false);
     
-    // Testimonial State
+    // Dialog States
     const [isTestimonialDialogOpen, setIsTestimonialDialogOpen] = useState(false);
     const [editingTestimonial, setEditingTestimonial] = useState<any>(null);
+    const [isPriceDialogOpen, setIsPriceDialogOpen] = useState(false);
+    const [editingPrice, setEditingPrice] = useState<any>(null);
+    const [isAreaDialogOpen, setIsAreaDialogOpen] = useState(false);
+    const [editingArea, setEditingArea] = useState<any>(null);
 
     const adminRoleRef = useMemoFirebase(() => {
         if (!firestore || !user) return null;
@@ -59,11 +73,18 @@ export default function ConfigureLandingPage() {
     const { data: adminRole, isLoading: isLoadingRole } = useDoc(adminRoleRef);
     const isUserAdmin = adminRole?.isAdmin === true;
 
+    // Data Collections
     const contentCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, "landing_page_content") : null, [firestore]);
     const { data: contentData, isLoading: isContentLoading } = useCollection(contentCollectionRef);
     
     const testimonialsCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, "testimonials") : null, [firestore]);
     const { data: testimonialsData, isLoading: areTestimonialsLoading } = useCollection(testimonialsCollectionRef);
+
+    const pricesCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, "consultation_prices") : null, [firestore]);
+    const { data: pricesData, isLoading: arePricesLoading } = useCollection(pricesCollectionRef);
+
+    const practiceAreasCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, 'practice_areas') : null, [firestore]);
+    const { data: practiceAreasData, isLoading: arePracticeAreasLoading } = useCollection(practiceAreasCollectionRef);
 
     useEffect(() => {
         if (!isUserLoading && !user) {
@@ -107,37 +128,27 @@ export default function ConfigureLandingPage() {
             description: `Conținutul pentru secțiunea "${sectionId}" a fost actualizat.`
         });
     }
-    
-    const handleSaveTestimonial = (testimonialData: any) => {
-        if (!firestore) return;
 
-        if (editingTestimonial) {
-            // Update existing testimonial
-            const docRef = doc(firestore, 'testimonials', editingTestimonial.id);
-            updateDocumentNonBlocking(docRef, testimonialData);
-            toast({ title: "Testimonial Actualizat", description: "Modificările au fost salvate." });
+    const handleSaveGeneric = (collectionName: string, data: any, editingItem: any | null, successMessage: string) => {
+        if (!firestore) return;
+    
+        if (editingItem) {
+            const docRef = doc(firestore, collectionName, editingItem.id);
+            updateDocumentNonBlocking(docRef, data);
+            toast({ title: `${successMessage} Actualizat`, description: "Modificările au fost salvate." });
         } else {
-            // Add new testimonial
-            const collectionRef = collection(firestore, 'testimonials');
-            addDocumentNonBlocking(collectionRef, testimonialData);
-            toast({ title: "Testimonial Adăugat", description: "Noul testimonial a fost adăugat." });
+            const collectionRef = collection(firestore, collectionName);
+            addDocumentNonBlocking(collectionRef, data);
+            toast({ title: `${successMessage} Adăugat`, description: `Noul element a fost adăugat.` });
         }
-        setEditingTestimonial(null);
-        setIsTestimonialDialogOpen(false);
-    };
-
-    const handleEditTestimonial = (testimonial: any) => {
-        setEditingTestimonial(testimonial);
-        setIsTestimonialDialogOpen(true);
     };
     
-    const handleDeleteTestimonial = (testimonialId: string) => {
+    const handleDeleteGeneric = (collectionName: string, itemId: string, successMessage: string) => {
         if (!firestore) return;
-        const docRef = doc(firestore, 'testimonials', testimonialId);
+        const docRef = doc(firestore, collectionName, itemId);
         deleteDocumentNonBlocking(docRef);
-        toast({ title: 'Testimonial Șters', description: 'Testimonialul a fost șters.' });
+        toast({ title: `${successMessage} Șters`, description: 'Elementul a fost șters.' });
     };
-
 
     const handleApplySuggestion = (suggestion: any) => {
         const { suggestedHeadline, suggestedBodyText, suggestedCallToAction } = suggestion;
@@ -146,7 +157,9 @@ export default function ConfigureLandingPage() {
         if (suggestedCallToAction) handleInputChange('hero', 'callToActionText', suggestedCallToAction);
     };
 
-    if (isLoading || isUserLoading || isLoadingRole) {
+    const totalLoading = isLoading || isUserLoading || isLoadingRole || areTestimonialsLoading || arePricesLoading || arePracticeAreasLoading;
+
+    if (totalLoading) {
         return (
             <div className="container py-12">
                 <Skeleton className="h-10 w-48 mb-8" />
@@ -253,6 +266,57 @@ export default function ConfigureLandingPage() {
                     </AccordionContent>
                 </AccordionItem>
                 
+                {/* Practice Areas Section */}
+                <AccordionItem value="item-6">
+                    <AccordionTrigger className="text-xl font-headline bg-muted px-4 rounded-t-lg">Servicii (Arii de Practică)</AccordionTrigger>
+                    <AccordionContent className="p-0">
+                        <Card className="rounded-t-none">
+                            <CardHeader>
+                                <CardTitle>Gestionare Servicii</CardTitle>
+                                <CardDescription>Adăugați, editați sau ștergeți ariile de practică afișate pe pagina principală.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {practiceAreasData?.map((area: any) => (
+                                    <Card key={area.id} className="flex items-center gap-4 p-4">
+                                        <AreaIcon name={area.icon} />
+                                        <div className="flex-1">
+                                            <p className="font-semibold">{area.title}</p>
+                                            <p className="text-sm text-foreground/80">{area.description}</p>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Button variant="ghost" size="icon" onClick={() => { setEditingArea(area); setIsAreaDialogOpen(true); }}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Sunteți sigur?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Această acțiune va șterge permanent acest serviciu.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Anulează</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteGeneric('practice_areas', area.id, 'Serviciu')}>Șterge</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </CardContent>
+                            <CardFooter className="flex justify-center border-t pt-4">
+                                <Button variant="outline" onClick={() => { setEditingArea(null); setIsAreaDialogOpen(true); }}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Adaugă Serviciu Nou
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    </AccordionContent>
+                </AccordionItem>
+
                  {/* Testimonials Section */}
                 <AccordionItem value="item-5">
                     <AccordionTrigger className="text-xl font-headline bg-muted px-4 rounded-t-lg">Testimoniale</AccordionTrigger>
@@ -263,48 +327,44 @@ export default function ConfigureLandingPage() {
                                 <CardDescription>Adăugați, editați sau ștergeți testimonialele afișate pe pagina principală.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {areTestimonialsLoading ? (
-                                    <Skeleton className="h-24 w-full" />
-                                ) : (
-                                    testimonialsData?.map((testimonial: any) => (
-                                        <Card key={testimonial.id} className="flex items-start gap-4 p-4">
-                                            <Avatar>
-                                                <AvatarImage src={testimonial.avatarUrl} />
-                                                <AvatarFallback>{testimonial.author.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1">
-                                                <p className="font-semibold">{testimonial.author} - <span className="text-sm text-muted-foreground">{testimonial.title}</span></p>
-                                                <p className="text-sm italic text-foreground/80">"{testimonial.quote}"</p>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <Button variant="ghost" size="icon" onClick={() => handleEditTestimonial(testimonial)}>
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Sunteți sigur?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                Această acțiune nu poate fi anulată. Testimonialul va fi șters permanent.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Anulează</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDeleteTestimonial(testimonial.id)}>
-                                                                Șterge
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </div>
-                                        </Card>
-                                    ))
-                                )}
+                                {testimonialsData?.map((testimonial: any) => (
+                                    <Card key={testimonial.id} className="flex items-start gap-4 p-4">
+                                        <Avatar>
+                                            <AvatarImage src={testimonial.avatarUrl} />
+                                            <AvatarFallback>{testimonial.author.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1">
+                                            <p className="font-semibold">{testimonial.author} - <span className="text-sm text-muted-foreground">{testimonial.title}</span></p>
+                                            <p className="text-sm italic text-foreground/80">"{testimonial.quote}"</p>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Button variant="ghost" size="icon" onClick={() => { setEditingTestimonial(testimonial); setIsTestimonialDialogOpen(true);}}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Sunteți sigur?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Această acțiune nu poate fi anulată. Testimonialul va fi șters permanent.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Anulează</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteGeneric('testimonials', testimonial.id, 'Testimonial')}>
+                                                            Șterge
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </Card>
+                                ))}
                             </CardContent>
                             <CardFooter className="flex justify-center border-t pt-4">
                                 <Button variant="outline" onClick={() => { setEditingTestimonial(null); setIsTestimonialDialogOpen(true); }}>
@@ -321,30 +381,45 @@ export default function ConfigureLandingPage() {
                     <AccordionContent className="p-0">
                          <Card className="rounded-t-none">
                              <CardHeader>
-                                <CardTitle>Texte Secțiune Prețuri</CardTitle>
-                                <CardDescription>Editează titlul și descrierea pentru secțiunea de prețuri.</CardDescription>
+                                <CardTitle>Gestionare Planuri de Prețuri</CardTitle>
+                                <CardDescription>Adăugați, editați sau ștergeți planurile de prețuri afișate pe pagina principală.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                 <div className="space-y-1">
-                                    <Label htmlFor="pricing-title">Titlu</Label>
-                                    <Input id="pricing-title" value={content.pricing?.title || ''} onChange={(e) => handleInputChange('pricing', 'title', e.target.value)} />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="pricing-description">Descriere</Label>
-                                    <Textarea id="pricing-description" value={content.pricing?.description || ''} onChange={(e) => handleInputChange('pricing', 'description', e.target.value)} rows={2}/>
-                                </div>
-                                <div className="!mt-6 border-t pt-6">
-                                     <h4 className="font-medium text-foreground">Gestionare Planuri de Prețuri</h4>
-                                     <p className="text-sm text-muted-foreground mt-1">
-                                        Pentru a adăuga, edita sau șterge planurile de prețuri, trebuie să modificați direct documentele din colecția <code className="bg-muted px-1.5 py-0.5 rounded-sm font-mono text-xs">consultation_prices</code> în baza de date Firestore.
-                                    </p>
-                                    <p className="text-sm text-muted-foreground mt-2">
-                                        Fiecare document din acea colecție va fi afișat automat ca un card de preț pe pagina principală.
-                                    </p>
-                                </div>
+                               {pricesData?.map((price: any) => (
+                                    <Card key={price.id} className="flex items-center gap-4 p-4">
+                                        <div className="flex-1">
+                                            <p className="font-semibold">{price.title} - <span className="text-sm font-bold text-primary">{price.flatRate ? `${price.flatRate} €` : `${price.pricePerHour} €/oră`}</span></p>
+                                            <p className="text-sm text-foreground/80">{price.description}</p>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Button variant="ghost" size="icon" onClick={() => { setEditingPrice(price); setIsPriceDialogOpen(true); }}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Sunteți sigur?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Această acțiune va șterge permanent acest plan de preț.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Anulează</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteGeneric('consultation_prices', price.id, 'Plan de preț')}>Șterge</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </Card>
+                                ))}
                             </CardContent>
-                             <CardFooter className="flex justify-end">
-                                <Button onClick={() => handleSaveSection('pricing')}>Salvează Textele</Button>
+                             <CardFooter className="flex justify-center border-t pt-4">
+                                <Button variant="outline" onClick={() => { setEditingPrice(null); setIsPriceDialogOpen(true); }}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Adaugă Plan de Preț
+                                </Button>
                             </CardFooter>
                         </Card>
                     </AccordionContent>
@@ -397,7 +472,28 @@ export default function ConfigureLandingPage() {
                 isOpen={isTestimonialDialogOpen}
                 onOpenChange={setIsTestimonialDialogOpen}
                 testimonial={editingTestimonial}
-                onSave={handleSaveTestimonial}
+                onSave={(data) => {
+                    handleSaveGeneric('testimonials', data, editingTestimonial, 'Testimonial');
+                    setIsTestimonialDialogOpen(false);
+                }}
+            />
+             <PriceDialog
+                isOpen={isPriceDialogOpen}
+                onOpenChange={setIsPriceDialogOpen}
+                price={editingPrice}
+                onSave={(data) => {
+                    handleSaveGeneric('consultation_prices', data, editingPrice, 'Plan de preț');
+                    setIsPriceDialogOpen(false);
+                }}
+            />
+            <PracticeAreaDialog
+                isOpen={isAreaDialogOpen}
+                onOpenChange={setIsAreaDialogOpen}
+                area={editingArea}
+                onSave={(data) => {
+                    handleSaveGeneric('practice_areas', data, editingArea, 'Serviciu');
+                    setIsAreaDialogOpen(false);
+                }}
             />
         </div>
     );
