@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { addMinutes, isPast, isToday, startOfDay, endOfDay } from "date-fns";
+import { addMinutes, isPast, isToday, startOfDay, endOfDay, getDay } from "date-fns";
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { collection, Timestamp, query, where, doc } from "firebase/firestore";
@@ -50,6 +50,7 @@ export default function SchedulePage() {
   const { data: scheduleSettings, isLoading: isLoadingSchedule } = useDoc(scheduleSettingsRef);
   const appointmentDuration = scheduleSettings?.appointmentDurationMinutes || 150;
   const availableTimes = scheduleSettings?.availableHours?.sort() || [];
+  const availableDays = scheduleSettings?.availableDays || [];
 
 
   const appointmentsQuery = useMemoFirebase(() => {
@@ -153,6 +154,16 @@ export default function SchedulePage() {
     return newDate;
   };
 
+  const isDayDisabled = (day: Date) => {
+    const dayOfWeek = getDay(day);
+    // Disable past days
+    if (isPast(day) && !isToday(day)) return true;
+    // Disable if no days are configured
+    if (availableDays.length === 0) return false;
+    // Disable if the day is not in the available days list
+    return !availableDays.includes(dayOfWeek);
+  }
+
   if (isConfirmed) {
     const fullDateTime = getFullDateTime(selectedTime!, date);
     return (
@@ -195,7 +206,7 @@ export default function SchedulePage() {
                 setDate(newDate);
                 setSelectedTime(null);
               }}
-              disabled={(d) => isPast(d) && !isToday(d)}
+              disabled={isDayDisabled}
               className="p-0"
             />
           </CardContent>

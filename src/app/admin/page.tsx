@@ -45,6 +45,16 @@ const allPossibleTimes = [
     "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"
 ];
 
+const daysOfWeek = [
+    { name: 'Duminică', value: 0 },
+    { name: 'Luni', value: 1 },
+    { name: 'Marți', value: 2 },
+    { name: 'Miercuri', value: 3 },
+    { name: 'Joi', value: 4 },
+    { name: 'Vineri', value: 5 },
+    { name: 'Sâmbătă', value: 6 },
+]
+
 export default function AdminPage() {
   const { firestore } = useFirebase();
   const { user, isUserLoading } = useUser();
@@ -52,8 +62,12 @@ export default function AdminPage() {
   const { toast } = useToast();
 
   const [isPublicRegistrationOpen, setIsPublicRegistrationOpen] = useState(false);
-  const [appointmentDuration, setAppointmentDuration] = useState(150);
+  
+  const [durationHours, setDurationHours] = useState(2);
+  const [durationMinutes, setDurationMinutes] = useState(30);
+
   const [availableHours, setAvailableHours] = useState<string[]>([]);
+  const [availableDays, setAvailableDays] = useState<number[]>([]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -92,8 +106,12 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (scheduleSettings) {
-      setAppointmentDuration(scheduleSettings.appointmentDurationMinutes || 150);
+      const totalMinutes = scheduleSettings.appointmentDurationMinutes || 150;
+      setDurationHours(Math.floor(totalMinutes / 60));
+      setDurationMinutes(totalMinutes % 60);
+
       setAvailableHours(scheduleSettings.availableHours || []);
+      setAvailableDays(scheduleSettings.availableDays || []);
     }
   }, [scheduleSettings]);
 
@@ -158,12 +176,34 @@ export default function AdminPage() {
     });
   };
 
+  const handleDayToggle = (dayValue: number) => {
+    if (!scheduleSettingsRef) return;
+    
+    const isCurrentlyAvailable = availableDays.includes(dayValue);
+    const newAvailableDays = isCurrentlyAvailable
+      ? availableDays.filter(d => d !== dayValue)
+      : [...availableDays, dayValue];
+      
+    setAvailableDays(newAvailableDays);
+    
+    updateDocumentNonBlocking(scheduleSettingsRef, {
+        availableDays: isCurrentlyAvailable ? arrayRemove(dayValue) : arrayUnion(dayValue)
+    });
+    
+    toast({
+      title: 'Zile actualizate',
+      description: `Ziua a fost ${isCurrentlyAvailable ? 'dezactivată' : 'activată'}.`,
+    });
+  };
+
+
   const handleScheduleSettingsUpdate = () => {
     if (!scheduleSettingsRef) return;
-    setDocumentNonBlocking(scheduleSettingsRef, { appointmentDurationMinutes: Number(appointmentDuration) }, { merge: true });
+    const totalMinutes = (durationHours * 60) + durationMinutes;
+    setDocumentNonBlocking(scheduleSettingsRef, { appointmentDurationMinutes: totalMinutes }, { merge: true });
     toast({
       title: 'Setări actualizate',
-      description: 'Setările programărilor au fost actualizate.',
+      description: 'Durata blocării a fost actualizată.',
     });
   };
 
@@ -398,23 +438,51 @@ export default function AdminPage() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div>
-                    <Label htmlFor="appointment-duration">
-                      Timp de blocare după programare (minute)
-                    </Label>
-                    <Input
-                      id="appointment-duration"
-                      type="number"
-                      value={appointmentDuration}
-                      onChange={(e) => setAppointmentDuration(Number(e.target.value))}
-                      placeholder="150"
-                      onBlur={handleScheduleSettingsUpdate}
-                    />
+                    <Label>Timp de blocare după programare</Label>
+                    <div className="flex items-center gap-2 mt-2">
+                        <Input
+                            id="duration-hours"
+                            type="number"
+                            value={durationHours}
+                            onChange={(e) => setDurationHours(Number(e.target.value))}
+                            onBlur={handleScheduleSettingsUpdate}
+                            className="w-16"
+                        />
+                        <Label htmlFor="duration-hours">ore</Label>
+                        <Input
+                            id="duration-minutes"
+                            type="number"
+                            value={durationMinutes}
+                            onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                            onBlur={handleScheduleSettingsUpdate}
+                            className="w-16"
+                            step={15}
+                        />
+                        <Label htmlFor="duration-minutes">min</Label>
+                    </div>
                      <p className="text-sm text-muted-foreground mt-1">
                       Apasă Enter sau ieși din câmp pentru a salva.
                     </p>
                   </div>
+                  
+                  <div>
+                    <Label>Zile Disponibile</Label>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                      {daysOfWeek.map((day) => (
+                        <Button
+                          key={day.value}
+                          variant={availableDays.includes(day.value) ? "default" : "outline"}
+                          onClick={() => handleDayToggle(day.value)}
+                          className={cn("transition-colors text-xs px-2 h-8", availableDays.includes(day.value) && "bg-primary text-primary-foreground")}
+                        >
+                          {day.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <Label>Ore Disponibile</Label>
                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">

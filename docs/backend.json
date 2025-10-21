@@ -170,6 +170,13 @@
             "type": "string"
           },
           "description": "List of available time slots for appointments, e.g., ['09:00', '10:00']."
+        },
+        "availableDays": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "List of available days of the week, represented by numbers (0=Sunday, 1=Monday, ..., 6=Saturday)."
         }
       }
     }
