@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useFirebase, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import {
   Table,
@@ -33,10 +34,16 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
+import { cn } from "@/lib/utils";
+
+const allPossibleTimes = [
+    "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
+    "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"
+];
 
 export default function AdminPage() {
   const { firestore } = useFirebase();
@@ -46,6 +53,7 @@ export default function AdminPage() {
 
   const [isPublicRegistrationOpen, setIsPublicRegistrationOpen] = useState(false);
   const [appointmentDuration, setAppointmentDuration] = useState(150);
+  const [availableHours, setAvailableHours] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -85,6 +93,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (scheduleSettings) {
       setAppointmentDuration(scheduleSettings.appointmentDurationMinutes || 150);
+      setAvailableHours(scheduleSettings.availableHours || []);
     }
   }, [scheduleSettings]);
 
@@ -126,6 +135,26 @@ export default function AdminPage() {
     toast({
       title: 'Setări actualizate',
       description: `Înregistrarea publică a fost ${isOpen ? 'activată' : 'dezactivată'}.`,
+    });
+  };
+  
+  const handleTimeToggle = (time: string) => {
+    if (!scheduleSettingsRef) return;
+    
+    const isCurrentlyAvailable = availableHours.includes(time);
+    const newAvailableHours = isCurrentlyAvailable
+      ? availableHours.filter(h => h !== time)
+      : [...availableHours, time];
+      
+    setAvailableHours(newAvailableHours);
+    
+    updateDocumentNonBlocking(scheduleSettingsRef, {
+        availableHours: isCurrentlyAvailable ? arrayRemove(time) : arrayUnion(time)
+    });
+    
+    toast({
+      title: 'Orar actualizat',
+      description: `Ora ${time} a fost ${isCurrentlyAvailable ? 'dezactivată' : 'activată'}.`,
     });
   };
 
@@ -360,10 +389,13 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent>
               {isLoadingSchedule ? (
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <Skeleton className="h-5 w-32" />
                   <Skeleton className="h-10 w-full" />
                   <Skeleton className="h-10 w-24" />
+                  <div className="grid grid-cols-4 gap-2">
+                    {allPossibleTimes.slice(0,8).map(time => <Skeleton key={time} className="h-9 w-full" />)}
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -377,14 +409,33 @@ export default function AdminPage() {
                       value={appointmentDuration}
                       onChange={(e) => setAppointmentDuration(Number(e.target.value))}
                       placeholder="150"
+                      onBlur={handleScheduleSettingsUpdate}
                     />
                      <p className="text-sm text-muted-foreground mt-1">
-                      Ex: 150 minute = 2 ore și 30 minute.
+                      Apasă Enter sau ieși din câmp pentru a salva.
                     </p>
                   </div>
-                  <Button onClick={handleScheduleSettingsUpdate} className="w-full">
-                    Salvează Setările Programărilor
-                  </Button>
+                  <div>
+                    <Label>Ore Disponibile</Label>
+                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                        {allPossibleTimes.map((time) => {
+                            const isAvailable = availableHours.includes(time);
+                            return (
+                                <Button
+                                    key={time}
+                                    variant={isAvailable ? "default" : "outline"}
+                                    onClick={() => handleTimeToggle(time)}
+                                    className={cn("transition-colors", isAvailable && "bg-primary text-primary-foreground")}
+                                >
+                                    {time}
+                                </Button>
+                            );
+                        })}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Selectează orele la care ești disponibil pentru programări.
+                    </p>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -394,3 +445,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    

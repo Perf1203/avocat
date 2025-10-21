@@ -5,9 +5,9 @@ import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { addMinutes, isPast, isToday, startOfDay, endOfDay, parse } from "date-fns";
+import { addMinutes, isPast, isToday, startOfDay, endOfDay } from "date-fns";
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Clock, CheckCircle } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { collection, Timestamp, query, where, doc } from "firebase/firestore";
 
 
@@ -30,13 +30,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useFirebase, useCollection, useDoc, useMemoFirebase } from "@/firebase";
 import { addDocumentNonBlocking } from "@/firebase";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type AppointmentFormData = z.infer<typeof AppointmentSchema>;
-
-const availableTimes = [
-  "09:00", "10:00", "11:00", "12:00",
-  "14:00", "15:00", "16:00", "17:00",
-];
 
 export default function SchedulePage() {
   const { toast } = useToast();
@@ -51,8 +47,9 @@ export default function SchedulePage() {
     return doc(firestore, 'admin_settings', 'schedule');
   }, [firestore]);
 
-  const { data: scheduleSettings } = useDoc(scheduleSettingsRef);
+  const { data: scheduleSettings, isLoading: isLoadingSchedule } = useDoc(scheduleSettingsRef);
   const appointmentDuration = scheduleSettings?.appointmentDurationMinutes || 150;
+  const availableTimes = scheduleSettings?.availableHours?.sort() || [];
 
 
   const appointmentsQuery = useMemoFirebase(() => {
@@ -89,7 +86,7 @@ export default function SchedulePage() {
         })
     });
     return blocked;
-  }, [appointmentsOnSelectedDate, appointmentDuration, date]);
+  }, [appointmentsOnSelectedDate, appointmentDuration, date, availableTimes]);
 
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(AppointmentSchema),
@@ -213,25 +210,43 @@ export default function SchedulePage() {
             <p className="text-sm text-muted-foreground pt-1">{date ? format(date, 'EEEE, d MMMM') : 'Vă rugăm selectați o zi'}</p>
           </CardHeader>
           <CardContent>
-             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {availableTimes.map((time) => {
-                    const fullDateTime = getFullDateTime(time, date);
-                    const isTimePast = date && isToday(date) ? isPast(fullDateTime) : false;
-                    const isBooked = blockedSlots.has(time);
+             {isLoadingSchedule ? (
+                <div className="grid grid-cols-3 gap-2">
+                    {[...Array(9)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                </div>
+             ): (
+                <>
+                {availableTimes.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {availableTimes.map((time) => {
+                            const fullDateTime = getFullDateTime(time, date);
+                            const isTimePast = date && isToday(date) ? isPast(fullDateTime) : false;
+                            const isBooked = blockedSlots.has(time);
 
-                    return (
-                        <Button
-                            key={time}
-                            variant={selectedTime === time ? "default" : "outline"}
-                            onClick={() => setSelectedTime(time)}
-                            disabled={!date || isTimePast || isBooked}
-                            className={cn(selectedTime === time && "bg-primary text-primary-foreground")}
-                        >
-                            {time}
-                        </Button>
-                    );
-                })}
-             </div>
+                            return (
+                                <Button
+                                    key={time}
+                                    variant={selectedTime === time ? "default" : "outline"}
+                                    onClick={() => setSelectedTime(time)}
+                                    disabled={!date || isTimePast || isBooked}
+                                    className={cn(selectedTime === time && "bg-primary text-primary-foreground")}
+                                >
+                                    {time}
+                                </Button>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <Alert variant="default" className="border-amber-500 text-amber-700">
+                        <AlertCircle className="h-4 w-4 !text-amber-600" />
+                        <AlertTitle>Niciun interval orar disponibil</AlertTitle>
+                        <AlertDescription>
+                            Administratorul nu a configurat încă orele disponibile pentru programări.
+                        </AlertDescription>
+                    </Alert>
+                )}
+                </>
+             )}
           </CardContent>
         </Card>
       </div>
@@ -317,3 +332,5 @@ export default function SchedulePage() {
     </div>
   );
 }
+
+    
