@@ -150,6 +150,16 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   const handleSaveIdentification = () => {
     if (!conversationRef) return;
     
+    // Require at least a name to proceed if identification was requested by admin
+    if (conversation?.identificationRequested && !guestName.trim()) {
+        toast({
+            variant: 'destructive',
+            title: 'Nume Obligatoriu',
+            description: 'Vă rugăm să introduceți un nume pentru a continua.'
+        });
+        return;
+    }
+
     const identificationData: { guestName?: string; guestEmail?: string, identificationRequested?: boolean } = {};
     if (guestName) identificationData.guestName = guestName;
     if (guestEmail) identificationData.guestEmail = guestEmail;
@@ -166,9 +176,11 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
 
   const renderIdentificationForm = () => (
     <div className="p-4 space-y-4 border-b">
-        <h3 className="font-semibold text-center text-sm text-muted-foreground">Identificare Opțională</h3>
+        <h3 className="font-semibold text-center text-sm text-muted-foreground">
+            {conversation?.identificationRequested ? 'Administratorul solicită identificarea' : 'Identificare Opțională'}
+        </h3>
         <div className="space-y-2">
-            <Label htmlFor="guest-name">Nume</Label>
+            <Label htmlFor="guest-name">Nume *</Label>
             <div className="relative">
                 <UserIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input id="guest-name" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Numele dvs..." className="pl-8" />
@@ -182,21 +194,30 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             </div>
         </div>
         <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setShowIdentification(false)}>Anulează</Button>
+            {!conversation?.identificationRequested && (
+                <Button variant="ghost" onClick={() => setShowIdentification(false)}>Anulează</Button>
+            )}
             <Button onClick={handleSaveIdentification}>Salvează</Button>
         </div>
     </div>
   );
 
   return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+    <Sheet open={isOpen} onOpenChange={(open) => {
+        // Prevent closing the sheet if identification is mandatory
+        if(conversation?.identificationRequested) {
+            onOpenChange(true);
+        } else {
+            onOpenChange(open);
+        }
+    }}>
       <SheetContent className="flex flex-col p-0">
         <SheetHeader className="p-4 border-b flex-row justify-between items-center">
           <div>
             <SheetTitle>Contactați-ne</SheetTitle>
             <SheetDescription>Lăsați-ne un mesaj și vă vom răspunde în curând.</SheetDescription>
           </div>
-           <Button variant="ghost" size="sm" onClick={handleLeaveChat}>
+           <Button variant="ghost" size="sm" onClick={handleLeaveChat} disabled={conversation?.identificationRequested}>
              <LogOut className="mr-2 h-4 w-4"/>
              Părăsiți
            </Button>
@@ -246,8 +267,9 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Scrieți mesajul..."
               autoComplete="off"
+              disabled={showIdentification}
             />
-            <Button type="submit" size="icon" disabled={!message.trim()}>
+            <Button type="submit" size="icon" disabled={!message.trim() || showIdentification}>
               <Send className="h-4 w-4" />
               <span className="sr-only">Trimite</span>
             </Button>
