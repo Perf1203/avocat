@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useFirebase, useUser, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useFirebase, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { Send, ArrowLeft, CircleUserRound, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+
 
 export default function ChatConversationPage() {
   const { firestore } = useFirebase();
@@ -188,4 +190,3 @@ export default function ChatConversationPage() {
   );
 }
 
-    
