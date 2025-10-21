@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -20,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban } from 'lucide-react';
+import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -503,6 +502,24 @@ export default function AdminPage() {
           </Card>
         </div>
         <div className="lg:col-span-1 grid gap-8 content-start">
+           <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LayoutTemplate className="h-5 w-5" />
+                Configurare Pagină
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Modificați conținutul și imaginile de pe pagina principală.
+              </p>
+              <Button asChild className='w-full'>
+                <Link href="/admin/configure-landing">
+                  Configurează Pagina Principală
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -689,3 +706,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
