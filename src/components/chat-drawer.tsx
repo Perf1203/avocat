@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, LogOut, User as UserIcon, Mail, Info } from 'lucide-react';
+import { Send, LogOut, User as UserIcon, Mail, Info, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -14,6 +14,9 @@ import { ScrollArea } from './ui/scroll-area';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from './ui/label';
+import { toDataURL } from 'qrcode';
+import Image from 'next/image';
+import Link from 'next/link';
 
 interface ChatDrawerProps {
   isOpen: boolean;
@@ -33,6 +36,8 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   const [showIdentification, setShowIdentification] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  
+  const [qrCode, setQrCode] = useState<string | null>(null);
 
   useEffect(() => {
     const storedConversationId = localStorage.getItem('conversationId');
@@ -49,8 +54,15 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   const { data: conversation } = useDoc(conversationRef);
 
   useEffect(() => {
-    if (conversation?.identificationRequested) {
+    if (conversation?.identificationRequested && !conversation?.guestName) {
         setShowIdentification(true);
+    }
+    if (conversation?.paymentLink && conversation?.paymentStatus === 'pending') {
+      toDataURL(conversation.paymentLink, { width: 200 })
+        .then(url => setQrCode(url))
+        .catch(err => console.error(err));
+    } else {
+        setQrCode(null);
     }
   }, [conversation]);
 
@@ -205,7 +217,7 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   return (
     <Sheet open={isOpen} onOpenChange={(open) => {
         // Prevent closing the sheet if identification is mandatory
-        if(conversation?.identificationRequested) {
+        if(conversation?.identificationRequested && !conversation?.guestName) {
             onOpenChange(true);
         } else {
             onOpenChange(open);
@@ -217,7 +229,7 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             <SheetTitle>Contactați-ne</SheetTitle>
             <SheetDescription>Lăsați-ne un mesaj și vă vom răspunde în curând.</SheetDescription>
           </div>
-           <Button variant="ghost" size="sm" onClick={handleLeaveChat} disabled={conversation?.identificationRequested}>
+           <Button variant="ghost" size="sm" onClick={handleLeaveChat} disabled={conversation?.identificationRequested && !conversation?.guestName}>
              <LogOut className="mr-2 h-4 w-4"/>
              Părăsiți
            </Button>
@@ -233,31 +245,63 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             )}
             { showIdentification && renderIdentificationForm() }
             <div className="p-4 space-y-4">
-            {messages && messages.map((msg: any) => (
-                <div
-                    key={msg.id}
-                    className={cn(
-                    'flex items-end gap-2',
-                    msg.senderId === user?.uid ? 'justify-end' : 'justify-start'
-                    )}
-                >
-                    {msg.senderId !== user?.uid && (
-                        <Avatar className="h-8 w-8">
-                            <AvatarFallback>A</AvatarFallback>
-                        </Avatar>
-                    )}
+            {messages && messages.map((msg: any) => {
+                 if (msg.isSystemMessage) {
+                    if (msg.systemMessageType === 'payment_request' && msg.paymentLink) {
+                        return (
+                             <div key={msg.id} className="p-4 my-2 rounded-lg border bg-secondary/50 text-center">
+                                <h4 className="font-semibold flex items-center justify-center gap-2 mb-3"><CreditCard /> Solicitare de Plată</h4>
+                                {qrCode && (
+                                    <div className="my-4 flex justify-center">
+                                        <Image src={qrCode} alt="QR Code Plată" width={150} height={150} />
+                                    </div>
+                                )}
+                                <p className="text-xs text-muted-foreground mb-3">Scanați codul QR sau folosiți linkul de mai jos.</p>
+                                <Button asChild size="sm">
+                                    <Link href={msg.paymentLink} target="_blank">Mergi la Plată</Link>
+                                </Button>
+                             </div>
+                        );
+                    }
+                     if (msg.systemMessageType === 'payment_confirmed') {
+                        return (
+                            <div key={msg.id} className="text-center text-xs text-muted-foreground my-4 p-2 bg-green-100 dark:bg-green-900/50 rounded-md">
+                                --- {msg.text} ---
+                            </div>
+                        )
+                    }
+                    return (
+                        <div key={msg.id} className="text-center text-xs text-muted-foreground my-4">
+                            --- {msg.text} ---
+                        </div>
+                    )
+                }
+                return (
                     <div
-                    className={cn(
-                        'max-w-xs rounded-lg px-3 py-2 text-sm',
-                        msg.senderId === user?.uid
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    )}
+                        key={msg.id}
+                        className={cn(
+                        'flex items-end gap-2',
+                        msg.senderId === user?.uid ? 'justify-end' : 'justify-start'
+                        )}
                     >
-                    {msg.text}
+                        {msg.senderId !== user?.uid && (
+                            <Avatar className="h-8 w-8">
+                                <AvatarFallback>A</AvatarFallback>
+                            </Avatar>
+                        )}
+                        <div
+                        className={cn(
+                            'max-w-xs rounded-lg px-3 py-2 text-sm',
+                            msg.senderId === user?.uid
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        )}
+                        >
+                        {msg.text}
+                        </div>
                     </div>
-                </div>
-                ))}
+                )
+                })}
             </div>
         </ScrollArea>
         <div className="p-4 border-t">
