@@ -35,25 +35,27 @@ export function PriceDialog({ isOpen, onOpenChange, price, onSave }: PriceDialog
     resolver: zodResolver(PriceSchema),
   });
 
-  const { register, handleSubmit, reset, watch, formState: { errors } } = form;
+  const { register, handleSubmit, reset, watch, formState: { errors }, setValue } = form;
 
   const priceType = watch('type');
 
   useEffect(() => {
-    if (price) {
-      reset({
-        ...price,
-        flatRate: price.flatRate || undefined,
-        pricePerHour: price.pricePerHour || undefined,
-      });
-    } else {
-      reset({
-        title: '',
-        description: '',
-        type: undefined,
-        flatRate: undefined,
-        pricePerHour: undefined,
-      });
+    if (isOpen) {
+        if (price) {
+          reset({
+            ...price,
+            flatRate: price.flatRate || undefined,
+            pricePerHour: price.pricePerHour || undefined,
+          });
+        } else {
+          reset({
+            title: '',
+            description: '',
+            type: undefined,
+            flatRate: undefined,
+            pricePerHour: undefined,
+          });
+        }
     }
   }, [price, isOpen, reset]);
 
@@ -85,15 +87,15 @@ export function PriceDialog({ isOpen, onOpenChange, price, onSave }: PriceDialog
           <div className="space-y-2">
             <Label>Tip Preț</Label>
             <RadioGroup
-                onValueChange={(value) => form.setValue('type', value as 'flat' | 'hourly')}
-                defaultValue={price?.type}
+                onValueChange={(value) => setValue('type', value as 'flat' | 'hourly')}
+                value={priceType}
                 className="flex gap-4"
             >
-                <Label className="flex items-center gap-2 border rounded-md p-3 flex-1 has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:checked]:border-primary">
+                <Label className="flex items-center gap-2 border rounded-md p-3 flex-1 has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:checked]:border-primary cursor-pointer">
                     <RadioGroupItem value="flat" />
                     Taxă Unică (Flat)
                 </Label>
-                <Label className="flex items-center gap-2 border rounded-md p-3 flex-1 has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:checked]:border-primary">
+                <Label className="flex items-center gap-2 border rounded-md p-3 flex-1 has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:checked]:border-primary cursor-pointer">
                     <RadioGroupItem value="hourly" />
                     Orar (Hourly)
                 </Label>
@@ -103,15 +105,15 @@ export function PriceDialog({ isOpen, onOpenChange, price, onSave }: PriceDialog
 
            <div className={cn("space-y-2", priceType === 'flat' ? 'block' : 'hidden')}>
             <Label htmlFor="flatRate">Valoare Taxă Unică (€)</Label>
-            <Input id="flatRate" type="number" {...register('flatRate')} />
+            <Input id="flatRate" type="number" {...register('flatRate', { valueAsNumber: true })} />
+            {errors.flatRate && <p className="text-sm text-destructive">{errors.flatRate.message}</p>}
           </div>
 
           <div className={cn("space-y-2", priceType === 'hourly' ? 'block' : 'hidden')}>
             <Label htmlFor="pricePerHour">Valoare Taxă Orară (€/oră)</Label>
-            <Input id="pricePerHour" type="number" {...register('pricePerHour')} />
+            <Input id="pricePerHour" type="number" {...register('pricePerHour', { valueAsNumber: true })} />
+            {errors.pricePerHour && <p className="text-sm text-destructive">{errors.pricePerHour.message}</p>}
           </div>
-          {errors.flatRate && <p className="text-sm text-destructive">{errors.flatRate.message}</p>}
-
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

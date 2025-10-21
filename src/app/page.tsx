@@ -333,14 +333,18 @@ export default function Home() {
                     (pricesData as any[]).map((price) => (
                         <Card key={price.id} className="flex flex-col">
                             <CardHeader>
-                                <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                                <CardTitle className="font-headline text-xl flex items-center gap-2">
                                     {price.type === 'flat' ? <Euro/> : <FileText />}
                                     {price.title}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="flex-grow">
-                                {price.flatRate && <p className="text-4xl font-bold mb-2">{price.flatRate} €</p>}
-                                {price.pricePerHour && <p className="text-4xl font-bold mb-2">{price.pricePerHour} €<span className="text-lg font-normal text-muted-foreground">/oră</span></p>}
+                                {price.type === 'flat' && price.flatRate &&
+                                    <p className="text-4xl font-bold mb-2">{price.flatRate} €</p>
+                                }
+                                {price.type === 'hourly' && price.pricePerHour &&
+                                    <p className="text-4xl font-bold mb-2">{price.pricePerHour} €<span className="text-lg font-normal text-muted-foreground">/oră</span></p>
+                                }
                                 <p className="text-muted-foreground">{price.description}</p>
                             </CardContent>
                             <CardFooter>

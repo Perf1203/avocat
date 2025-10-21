@@ -50,15 +50,15 @@ export const PriceSchema = z.object({
   title: z.string().min(3, { message: "Titlul trebuie să aibă cel puțin 3 caractere." }),
   description: z.string().min(10, { message: "Descrierea trebuie să aibă cel puțin 10 caractere." }),
   type: z.enum(['flat', 'hourly'], { required_error: "Trebuie să selectați un tip de preț." }),
-  flatRate: z.coerce.number().optional(),
-  pricePerHour: z.coerce.number().optional(),
+  flatRate: z.number().positive("Prețul trebuie să fie un număr pozitiv.").optional(),
+  pricePerHour: z.number().positive("Prețul trebuie să fie un număr pozitiv.").optional(),
 }).refine(data => {
     if (data.type === 'flat') return data.flatRate !== undefined && data.flatRate > 0;
     if (data.type === 'hourly') return data.pricePerHour !== undefined && data.pricePerHour > 0;
     return false;
 }, {
     message: "Trebuie să specificați o valoare pentru tipul de preț selectat.",
-    path: ["flatRate"], // or pricePerHour, error is shown on the first one
+    path: ["flatRate"], 
 });
 
 export const PracticeAreaSchema = z.object({
