@@ -42,7 +42,7 @@ export function PracticeAreaDialog({ isOpen, onOpenChange, area, onSave }: Pract
   const [searchTerm, setSearchTerm] = useState('');
   const selectedIconName = watch('icon');
 
-  const filteredIcons = searchTerm
+  const filteredIcons = searchTerm && Array.isArray(iconList)
     ? iconList.filter(iconName => iconName.toLowerCase().includes(searchTerm.toLowerCase()))
     : iconList;
 
@@ -105,8 +105,9 @@ export function PracticeAreaDialog({ isOpen, onOpenChange, area, onSave }: Pract
             </div>
              <ScrollArea className="h-48 mt-2 border rounded-md p-2">
                 <div className="grid grid-cols-5 gap-1">
-                    {filteredIcons.map(iconName => {
+                    {Array.isArray(filteredIcons) && filteredIcons.map(iconName => {
                         const IconComponent = iconMap[iconName];
+                        if (!IconComponent) return null;
                         return (
                             <Button 
                                 key={iconName}
