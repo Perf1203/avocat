@@ -255,7 +255,7 @@ export default function Home() {
                  [...Array(3)].map((_, i) => (
                     <div key={i} className="text-center p-4"><Skeleton className="h-48 w-full"/></div>
                 ))
-              ) : practiceAreasData && practiceAreasData.length > 0 ? (
+              ) : Array.isArray(practiceAreasData) && practiceAreasData.length > 0 ? (
                 practiceAreasData.map((area: any) => (
                     <div key={area.id} className="text-center">
                     <div className="flex justify-center mb-4"><AreaIcon name={area.icon}/></div>
@@ -286,7 +286,7 @@ export default function Home() {
                         [...Array(2)].map((_, i) => (
                             <Card key={i} className="p-8"><Skeleton className="h-full w-full"/></Card>
                         ))
-                    ) : testimonialsData && testimonialsData.length > 0 ? (
+                    ) : Array.isArray(testimonialsData) && testimonialsData.length > 0 ? (
                         testimonialsData.map((testimonial: any) => (
                             <Card key={testimonial.id} className="p-8">
                                 <CardContent className="p-0">
@@ -329,22 +329,23 @@ export default function Home() {
                         [...Array(2)].map((_, i) => (
                             <Card key={i} className="flex flex-col"><Skeleton className="h-full w-full"/></Card>
                         ))
-                   ) : pricesData && pricesData.length > 0 ? (
-                    (pricesData as any[]).map((price) => (
-                        <Card key={price.id} className="flex flex-col">
+                   ) : Array.isArray(pricesData) && pricesData.length > 0 ? (
+                    pricesData.map((price: any) => (
+                        <Card key={price.id} className="flex flex-col text-center">
                             <CardHeader>
-                                <CardTitle className="font-headline text-xl flex items-center gap-2">
+                                <CardTitle className="font-headline text-2xl flex items-center justify-center gap-2">
+                                     {price.type === 'flat' ? <Euro /> : <FileText />}
                                     {price.title}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="flex-grow">
                                 {price.type === 'flat' && price.flatRate &&
-                                    <p className="text-4xl font-bold mb-2">{price.flatRate} €</p>
+                                    <p className="text-5xl font-bold mb-2">{price.flatRate}<span className="text-3xl text-muted-foreground">€</span></p>
                                 }
                                 {price.type === 'hourly' && price.pricePerHour &&
-                                    <p className="text-4xl font-bold mb-2">{price.pricePerHour} €<span className="text-lg font-normal text-muted-foreground">/oră</span></p>
+                                    <p className="text-5xl font-bold mb-2">{price.pricePerHour}<span className="text-lg font-normal text-muted-foreground">€/oră</span></p>
                                 }
-                                <p className="text-muted-foreground">{price.description}</p>
+                                <p className="text-muted-foreground mt-4">{price.description}</p>
                             </CardContent>
                             <CardFooter>
                                 <Button asChild className="w-full">
@@ -374,7 +375,7 @@ export default function Home() {
                         [...Array(3)].map((_, i) => (
                             <Card key={i} className="overflow-hidden flex flex-col"><Skeleton className="h-full w-full"/></Card>
                         ))
-                    ) : blogPosts && blogPosts.length > 0 ? (
+                    ) : Array.isArray(blogPosts) && blogPosts.length > 0 ? (
                         blogPosts.map((post: any) => (
                             <Card key={post.id} className="overflow-hidden flex flex-col">
                                <div className="h-56 relative w-full">

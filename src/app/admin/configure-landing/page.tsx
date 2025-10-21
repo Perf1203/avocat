@@ -276,7 +276,7 @@ export default function ConfigureLandingPage() {
                                 <CardDescription>Adăugați, editați sau ștergeți ariile de practică afișate pe pagina principală.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {practiceAreasData && practiceAreasData.map((area: any) => (
+                                {Array.isArray(practiceAreasData) && practiceAreasData.map((area: any) => (
                                     <Card key={area.id} className="flex items-center gap-4 p-4">
                                         <AreaIcon name={area.icon} />
                                         <div className="flex-1">
@@ -327,7 +327,7 @@ export default function ConfigureLandingPage() {
                                 <CardDescription>Adăugați, editați sau ștergeți testimonialele afișate pe pagina principală.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {testimonialsData?.map((testimonial: any) => (
+                                {Array.isArray(testimonialsData) && testimonialsData.map((testimonial: any) => (
                                     <Card key={testimonial.id} className="flex items-start gap-4 p-4">
                                         <Avatar>
                                             <AvatarImage src={testimonial.avatarUrl} />
@@ -385,7 +385,7 @@ export default function ConfigureLandingPage() {
                                 <CardDescription>Adăugați, editați sau ștergeți planurile de prețuri afișate pe pagina principală.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                               {pricesData?.map((price: any) => (
+                               {Array.isArray(pricesData) && pricesData.map((price: any) => (
                                     <Card key={price.id} className="flex items-center gap-4 p-4">
                                         <div className="flex-1">
                                             <p className="font-semibold">{price.title} - 
