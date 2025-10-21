@@ -389,7 +389,7 @@ export default function ConfigureLandingPage() {
                                     <Card key={price.id} className="flex items-center gap-4 p-4">
                                         <div className="flex-1">
                                             <p className="font-semibold">{price.title} - 
-                                                <span className="text-sm font-bold text-primary">
+                                                <span className="text-sm font-bold text-primary ml-2">
                                                     {price.type === 'flat' ? `${price.flatRate} €` : `${price.pricePerHour} €/oră`}
                                                 </span>
                                             </p>
@@ -502,4 +502,3 @@ export default function ConfigureLandingPage() {
         </div>
     );
 }
-
