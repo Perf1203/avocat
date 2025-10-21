@@ -1,13 +1,14 @@
+
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { isPast, isToday, startOfDay, endOfDay } from "date-fns";
+import { addMinutes, isPast, isToday, startOfDay, endOfDay, parse } from "date-fns";
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Clock, CheckCircle } from "lucide-react";
-import { collection, Timestamp, query, where } from "firebase/firestore";
+import { collection, Timestamp, query, where, doc } from "firebase/firestore";
 
 
 import { AppointmentSchema } from "@/lib/schemas";
@@ -27,7 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useFirebase, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirebase, useCollection, useDoc, useMemoFirebase } from "@/firebase";
 import { addDocumentNonBlocking } from "@/firebase";
 
 type AppointmentFormData = z.infer<typeof AppointmentSchema>;
@@ -45,6 +46,15 @@ export default function SchedulePage() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const scheduleSettingsRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'admin_settings', 'schedule');
+  }, [firestore]);
+
+  const { data: scheduleSettings } = useDoc(scheduleSettingsRef);
+  const appointmentDuration = scheduleSettings?.appointmentDurationMinutes || 150;
+
+
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !date) return null;
     const start = startOfDay(date);
@@ -58,12 +68,28 @@ export default function SchedulePage() {
 
   const { data: appointmentsOnSelectedDate } = useCollection(appointmentsQuery);
 
-  const bookedTimes = useMemo(() => {
+  const blockedSlots = useMemo(() => {
     if (!appointmentsOnSelectedDate) return new Set();
-    return new Set(
-      appointmentsOnSelectedDate.map(apt => format((apt as any).startTime.toDate(), 'HH:mm'))
-    );
-  }, [appointmentsOnSelectedDate]);
+    const blocked = new Set<string>();
+    
+    (appointmentsOnSelectedDate as any[]).forEach(apt => {
+        const startTime = apt.startTime.toDate();
+        const endTime = addMinutes(startTime, appointmentDuration);
+        
+        availableTimes.forEach(timeSlot => {
+            const slotTime = getFullDateTime(timeSlot, date);
+            // Block the booked slot itself
+            if (format(startTime, 'HH:mm') === timeSlot) {
+                blocked.add(timeSlot);
+            }
+            // Block slots that fall within the duration of an existing appointment
+            if(slotTime > startTime && slotTime < endTime) {
+                blocked.add(timeSlot)
+            }
+        })
+    });
+    return blocked;
+  }, [appointmentsOnSelectedDate, appointmentDuration, date]);
 
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(AppointmentSchema),
@@ -79,7 +105,7 @@ export default function SchedulePage() {
     if (!firestore || !date || !selectedTime) return;
     setIsLoading(true);
 
-    const fullDateTime = getFullDateTime(selectedTime);
+    const fullDateTime = getFullDateTime(selectedTime, date);
 
     const appointmentData = {
       clientName: data.name,
@@ -91,7 +117,6 @@ export default function SchedulePage() {
       createdAt: Timestamp.now(),
     };
     
-    // Create client as well
     const clientData = {
       firstName: data.name.split(' ')[0],
       lastName: data.name.split(' ').slice(1).join(' '),
@@ -101,8 +126,6 @@ export default function SchedulePage() {
     const clientsCol = collection(firestore, 'clients');
     const appointmentsCol = collection(firestore, 'appointments');
 
-    // For simplicity, we create a new client every time.
-    // A more robust solution would check if the client exists.
     addDocumentNonBlocking(clientsCol, clientData);
     addDocumentNonBlocking(appointmentsCol, appointmentData)
       .then(() => {
@@ -125,16 +148,16 @@ export default function SchedulePage() {
       });
   };
 
-  const getFullDateTime = (time: string): Date => {
-    if (!date) return new Date();
+  const getFullDateTime = (time: string, baseDate: Date | undefined): Date => {
+    if (!baseDate) return new Date();
     const [hours, minutes] = time.split(':').map(Number);
-    const newDate = new Date(date);
+    const newDate = new Date(baseDate);
     newDate.setHours(hours, minutes, 0, 0);
     return newDate;
   };
 
   if (isConfirmed) {
-    const fullDateTime = getFullDateTime(selectedTime!);
+    const fullDateTime = getFullDateTime(selectedTime!, date);
     return (
       <div className="container py-24 sm:py-32">
         <Alert variant="default" className="max-w-2xl mx-auto border-green-500 bg-green-50 dark:bg-green-950">
@@ -192,9 +215,9 @@ export default function SchedulePage() {
           <CardContent>
              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {availableTimes.map((time) => {
-                    const fullDateTime = getFullDateTime(time);
+                    const fullDateTime = getFullDateTime(time, date);
                     const isTimePast = date && isToday(date) ? isPast(fullDateTime) : false;
-                    const isBooked = bookedTimes.has(time);
+                    const isBooked = blockedSlots.has(time);
 
                     return (
                         <Button

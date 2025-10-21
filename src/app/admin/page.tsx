@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -19,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Trash2, Settings } from 'lucide-react';
+import { Trash2, Settings, Clock } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +36,7 @@ import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 
 export default function AdminPage() {
   const { firestore } = useFirebase();
@@ -43,6 +45,7 @@ export default function AdminPage() {
   const { toast } = useToast();
 
   const [isPublicRegistrationOpen, setIsPublicRegistrationOpen] = useState(false);
+  const [appointmentDuration, setAppointmentDuration] = useState(150);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -60,11 +63,18 @@ export default function AdminPage() {
   const isUserAdmin = adminRole?.isAdmin === true;
 
   const registrationSettingsRef = useMemoFirebase(() => {
-    if (!firestore) return null; // Removed admin check to allow settings fetch for all logged-in users initially
+    if (!firestore) return null;
     return doc(firestore, 'app_settings', 'registration');
   }, [firestore]);
 
   const { data: registrationSettings, isLoading: isLoadingRegistration } = useDoc(registrationSettingsRef);
+
+  const scheduleSettingsRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'admin_settings', 'schedule');
+  }, [firestore]);
+
+  const { data: scheduleSettings, isLoading: isLoadingSchedule } = useDoc(scheduleSettingsRef);
 
   useEffect(() => {
     if (registrationSettings) {
@@ -72,10 +82,14 @@ export default function AdminPage() {
     }
   }, [registrationSettings]);
 
+  useEffect(() => {
+    if (scheduleSettings) {
+      setAppointmentDuration(scheduleSettings.appointmentDurationMinutes || 150);
+    }
+  }, [scheduleSettings]);
+
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !isUserAdmin) return null;
-    // This path is incorrect, it should query the nested collection
-    // but for now, let's assume a top-level `appointments` collection
     const coll = collection(firestore, 'appointments');
     return query(coll, orderBy('startTime', 'desc'));
   }, [firestore, isUserAdmin]);
@@ -112,6 +126,15 @@ export default function AdminPage() {
     toast({
       title: 'Setări actualizate',
       description: `Înregistrarea publică a fost ${isOpen ? 'activată' : 'dezactivată'}.`,
+    });
+  };
+
+  const handleScheduleSettingsUpdate = () => {
+    if (!scheduleSettingsRef) return;
+    setDocumentNonBlocking(scheduleSettingsRef, { appointmentDurationMinutes: Number(appointmentDuration) }, { merge: true });
+    toast({
+      title: 'Setări actualizate',
+      description: 'Setările programărilor au fost actualizate.',
     });
   };
 
@@ -297,7 +320,7 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 grid gap-8 content-start">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -326,6 +349,44 @@ export default function AdminPage() {
               <p className="text-sm text-muted-foreground mt-2">
                 Permite utilizatorilor să își creeze un cont nou din antet.
               </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Setări Programări
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingSchedule ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-24" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="appointment-duration">
+                      Timp de blocare după programare (minute)
+                    </Label>
+                    <Input
+                      id="appointment-duration"
+                      type="number"
+                      value={appointmentDuration}
+                      onChange={(e) => setAppointmentDuration(Number(e.target.value))}
+                      placeholder="150"
+                    />
+                     <p className="text-sm text-muted-foreground mt-1">
+                      Ex: 150 minute = 2 ore și 30 minute.
+                    </p>
+                  </div>
+                  <Button onClick={handleScheduleSettingsUpdate} className="w-full">
+                    Salvează Setările Programărilor
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

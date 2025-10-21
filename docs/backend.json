@@ -153,6 +153,25 @@
           "description": "Controls whether public user registration is open."
         }
       }
+    },
+    "AdminSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AdminSettings",
+      "type": "object",
+      "description": "Stores admin-configurable settings for the application.",
+      "properties": {
+        "appointmentDurationMinutes": {
+          "type": "number",
+          "description": "The duration of an appointment in minutes, used for cooldown."
+        },
+        "availableHours": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of available time slots for appointments, e.g., ['09:00', '10:00']."
+        }
+      }
     }
   },
   "auth": {
@@ -255,6 +274,22 @@
             "$ref": "#/backend/entities/AppSettings"
           },
           "description": "Stores global application settings. Accessible and modifiable by admins only. Should contain a single document with id 'registration'.",
+          "params": [
+            {
+              "name": "settingId",
+              "description": "The unique identifier for the setting document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/admin_settings/{settingId}",
+        "definition": {
+          "entityName": "AdminSettings",
+          "schema": {
+            "$ref": "#/backend/entities/AdminSettings"
+          },
+          "description": "Stores admin-configurable settings. Should contain a single document with id 'schedule'.",
           "params": [
             {
               "name": "settingId",
