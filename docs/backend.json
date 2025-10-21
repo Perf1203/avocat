@@ -177,8 +177,90 @@
             "type": "number"
           },
           "description": "List of available days of the week, represented by numbers (0=Sunday, 1=Monday, ..., 6=Saturday)."
+        },
+        "isChatEnabled": {
+          "type": "boolean",
+          "description": "Globally enables or disables the chat widget."
+        },
+        "chatType": {
+          "type": "string",
+          "enum": ["whatsapp", "internal"],
+          "description": "Determines the type of chat functionality."
+        },
+        "whatsAppNumber": {
+          "type": "string",
+          "description": "The phone number to be used for WhatsApp chat."
         }
       }
+    },
+    "ChatConversation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatConversation",
+      "type": "object",
+      "description": "Represents a single chat conversation between a guest and an admin.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the conversation."
+        },
+        "guestId": {
+          "type": "string",
+          "description": "The unique ID of the guest user (can be anonymous Firebase UID)."
+        },
+        "adminId": {
+          "type": "string",
+          "description": "The UID of the admin assigned to the conversation."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the conversation was created."
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the last message sent."
+        },
+        "lastMessageText": {
+          "type": "string",
+          "description": "A snippet of the last message for previews."
+        },
+        "isReadByAdmin": {
+          "type": "boolean",
+          "description": "Flag to see if admin has read the latest messages."
+        }
+      },
+      "required": ["guestId", "adminId", "createdAt", "lastMessageAt"]
+    },
+    "ChatMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatMessage",
+      "type": "object",
+      "description": "Represents a single message within a chat conversation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the message."
+        },
+        "conversationId": {
+          "type": "string",
+          "description": "The ID of the conversation this message belongs to."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "The UID of the message sender (guest or admin)."
+        },
+        "text": {
+          "type": "string",
+          "description": "The text content of the message."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the message was sent."
+        }
+      },
+      "required": ["conversationId", "senderId", "text", "timestamp"]
     }
   },
   "auth": {
@@ -301,6 +383,42 @@
             {
               "name": "settingId",
               "description": "The unique identifier for the setting document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/conversations/{conversationId}",
+        "definition": {
+          "entityName": "ChatConversation",
+          "schema": {
+            "$ref": "#/backend/entities/ChatConversation"
+          },
+          "description": "Stores metadata for a single chat conversation between a guest and an admin.",
+          "params": [
+            {
+              "name": "conversationId",
+              "description": "The unique identifier for the chat conversation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/conversations/{conversationId}/messages/{messageId}",
+        "definition": {
+          "entityName": "ChatMessage",
+          "schema": {
+            "$ref": "#/backend/entities/ChatMessage"
+          },
+          "description": "Stores the individual messages for a specific conversation.",
+          "params": [
+            {
+              "name": "conversationId",
+              "description": "The unique identifier for the chat conversation."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique identifier for the chat message."
             }
           ]
         }

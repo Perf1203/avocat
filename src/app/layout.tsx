@@ -1,9 +1,11 @@
+
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
+import { ChatWidget } from "@/components/chat-widget";
 
 export const metadata: Metadata = {
   title: "Avocat Law",
@@ -32,9 +34,12 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
           </div>
+          <ChatWidget />
           <Toaster />
         </FirebaseClientProvider>
       </body>
     </html>
   );
 }
+
+    

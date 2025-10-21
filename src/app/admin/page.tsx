@@ -1,12 +1,11 @@
 
-
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useFirebase, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import {
   Table,
   TableHeader,
@@ -21,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Trash2, Settings, Clock } from 'lucide-react';
+import { Trash2, Settings, Clock, MessageSquare, CircleUserRound } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +38,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { cn } from "@/lib/utils";
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const allPossibleTimes = [
     "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
@@ -68,6 +68,11 @@ export default function AdminPage() {
 
   const [availableHours, setAvailableHours] = useState<string[]>([]);
   const [availableDays, setAvailableDays] = useState<number[]>([]);
+
+  // Chat settings state
+  const [isChatEnabled, setIsChatEnabled] = useState(false);
+  const [chatType, setChatType] = useState('whatsapp');
+  const [whatsAppNumber, setWhatsAppNumber] = useState('');
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -112,6 +117,10 @@ export default function AdminPage() {
 
       setAvailableHours(scheduleSettings.availableHours || []);
       setAvailableDays(scheduleSettings.availableDays || []);
+
+      setIsChatEnabled(scheduleSettings.isChatEnabled ?? false);
+      setChatType(scheduleSettings.chatType ?? 'whatsapp');
+      setWhatsAppNumber(scheduleSettings.whatsAppNumber ?? '');
     }
   }, [scheduleSettings]);
 
@@ -133,6 +142,13 @@ export default function AdminPage() {
   }, [firestore, isUserAdmin]);
 
   const { data: clients, isLoading: isLoadingClients, error: clientsError } = useCollection(clientsQuery);
+  
+    const conversationsQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return query(collection(firestore, "conversations"), orderBy("lastMessageAt", "desc"));
+  }, [firestore, user?.uid]);
+
+  const { data: conversations, isLoading: isLoadingConversations } = useCollection(conversationsQuery);
   
   const showLoading = isUserLoading || isLoadingRole;
 
@@ -160,11 +176,6 @@ export default function AdminPage() {
     if (!scheduleSettingsRef) return;
     
     const isCurrentlyAvailable = availableHours.includes(time);
-    const newAvailableHours = isCurrentlyAvailable
-      ? availableHours.filter(h => h !== time)
-      : [...availableHours, time];
-      
-    setAvailableHours(newAvailableHours);
     
     updateDocumentNonBlocking(scheduleSettingsRef, {
         availableHours: isCurrentlyAvailable ? arrayRemove(time) : arrayUnion(time)
@@ -180,11 +191,6 @@ export default function AdminPage() {
     if (!scheduleSettingsRef) return;
     
     const isCurrentlyAvailable = availableDays.includes(dayValue);
-    const newAvailableDays = isCurrentlyAvailable
-      ? availableDays.filter(d => d !== dayValue)
-      : [...availableDays, dayValue];
-      
-    setAvailableDays(newAvailableDays);
     
     updateDocumentNonBlocking(scheduleSettingsRef, {
         availableDays: isCurrentlyAvailable ? arrayRemove(dayValue) : arrayUnion(dayValue)
@@ -200,12 +206,21 @@ export default function AdminPage() {
   const handleScheduleSettingsUpdate = () => {
     if (!scheduleSettingsRef) return;
     const totalMinutes = (durationHours * 60) + durationMinutes;
-    setDocumentNonBlocking(scheduleSettingsRef, { appointmentDurationMinutes: totalMinutes }, { merge: true });
+    updateDocumentNonBlocking(scheduleSettingsRef, { appointmentDurationMinutes: totalMinutes });
     toast({
       title: 'Setări actualizate',
       description: 'Durata blocării a fost actualizată.',
     });
   };
+
+  const handleChatSettingsUpdate = (field: string, value: any) => {
+    if (!scheduleSettingsRef) return;
+    updateDocumentNonBlocking(scheduleSettingsRef, { [field]: value });
+    toast({
+      title: 'Setări Chat Actualizate',
+      description: 'Configurația chatului a fost salvată.',
+    });
+  }
 
   if (showLoading) {
     return (
@@ -246,6 +261,56 @@ export default function AdminPage() {
       
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 grid gap-8">
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><MessageSquare /> Conversații Active</CardTitle>
+              <CardDescription>Aici puteți vedea și răspunde la mesajele vizitatorilor.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingConversations ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : conversations && conversations.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Vizitator</TableHead>
+                      <TableHead>Ultimul Mesaj</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead className="text-right">Acțiune</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {conversations.map((convo: any) => (
+                      <TableRow key={convo.id}>
+                        <TableCell>
+                            <div className="font-medium flex items-center gap-2">
+                                <CircleUserRound className="text-muted-foreground"/>
+                                <span>{convo.guestId.substring(0, 8)}...</span>
+                            </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground truncate max-w-xs">{convo.lastMessageText}</TableCell>
+                        <TableCell>{convo.lastMessageAt && format(convo.lastMessageAt.toDate(), 'PPP p')}</TableCell>
+                        <TableCell className="text-right">
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`/admin/chat/${convo.id}`}>Răspunde</Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  Nu există conversații active.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Programări Agendate</CardTitle>
@@ -418,6 +483,69 @@ export default function AdminPage() {
               <p className="text-sm text-muted-foreground mt-2">
                 Permite utilizatorilor să își creeze un cont nou din antet.
               </p>
+            </CardContent>
+          </Card>
+           <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Setări Chat
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {isLoadingSchedule ? (
+                <Skeleton className="h-20 w-full" />
+              ) : (
+                <>
+                  <div className="flex items-center justify-between space-x-2">
+                    <Label htmlFor="chat-enabled" className="font-medium">
+                      Activează Chat Widget
+                    </Label>
+                    <Switch
+                      id="chat-enabled"
+                      checked={isChatEnabled}
+                      onCheckedChange={(checked) => {
+                        setIsChatEnabled(checked);
+                        handleChatSettingsUpdate('isChatEnabled', checked);
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tip Chat</Label>
+                    <RadioGroup
+                      value={chatType}
+                      onValueChange={(value) => {
+                        setChatType(value);
+                        handleChatSettingsUpdate('chatType', value);
+                      }}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="whatsapp" id="whatsapp" />
+                        <Label htmlFor="whatsapp">WhatsApp</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="internal" id="internal" />
+                        <Label htmlFor="internal">Chat Intern</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                  {chatType === 'whatsapp' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsapp-number">Număr WhatsApp</Label>
+                      <Input
+                        id="whatsapp-number"
+                        placeholder="+40712345678"
+                        value={whatsAppNumber}
+                        onChange={(e) => setWhatsAppNumber(e.target.value)}
+                        onBlur={() => handleChatSettingsUpdate('whatsAppNumber', whatsAppNumber)}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Includeți codul țării.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
           <Card>
