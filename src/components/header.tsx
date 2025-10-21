@@ -10,7 +10,7 @@ import { signOut } from 'firebase/auth';
 
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useFirebase, useUser, useDoc, useMemoFirebase, useAuth } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +36,14 @@ export function Header() {
 
   const { data: registrationSettings } = useDoc(registrationSettingsRef);
   const isRegistrationOpen = registrationSettings?.isPublicRegistrationOpen === true;
+  
+  const adminRoleRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'roles_admin', user.uid);
+  }, [firestore, user]);
+  const { data: adminRole } = useDoc(adminRoleRef);
+  const isUserAdmin = adminRole?.isAdmin === true;
+
 
   const handleLogout = () => {
     signOut(auth).then(() => {
@@ -81,7 +89,7 @@ export function Header() {
           Creare Cont
         </Link>
       )}
-      {user && (
+      {isUserAdmin && (
         <>
           <Link
             href="/admin"
@@ -129,6 +137,9 @@ export function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="pr-0 pt-12">
+                <SheetHeader>
+                  <SheetTitle className="sr-only">Meniu Navigare</SheetTitle>
+                </SheetHeader>
                 <div className="flex flex-col gap-6">
                   <Link href="/" className="mb-4" onClick={() => setIsMobileMenuOpen(false)}>
                     <Logo />

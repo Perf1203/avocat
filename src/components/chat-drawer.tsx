@@ -2,15 +2,17 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send } from 'lucide-react';
+import { Send, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { useFirebase, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { useFirebase, useUser, useAuth, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, doc, addDoc, serverTimestamp, setDoc, where, getDocs, limit } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
+import { signOut } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatDrawerProps {
   isOpen: boolean;
@@ -19,10 +21,20 @@ interface ChatDrawerProps {
 
 export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   const { firestore } = useFirebase();
+  const auth = useAuth();
   const { user } = useUser();
+  const { toast } = useToast();
   const [message, setMessage] = useState('');
-  const [conversationId, setConversationId] = useState<string | null>(localStorage.getItem('conversationId'));
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Sync conversationId with localStorage on component mount
+    const storedConversationId = localStorage.getItem('conversationId');
+    if (storedConversationId) {
+      setConversationId(storedConversationId);
+    }
+  }, []);
 
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !conversationId) return null;
@@ -33,9 +45,34 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
 
   useEffect(() => {
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight });
+      setTimeout(() => {
+        if(scrollAreaRef.current) {
+          scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+        }
+      }, 100);
     }
   }, [messages]);
+  
+  const handleLeaveChat = async () => {
+    if (!auth) return;
+    try {
+      await signOut(auth);
+      localStorage.removeItem('conversationId');
+      setConversationId(null);
+      onOpenChange(false);
+       toast({
+        title: 'Chat încheiat',
+        description: 'Ați părăsit conversația.',
+      });
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Eroare',
+        description: 'Nu am putut încheia sesiunea de chat.',
+      });
+    }
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,12 +81,15 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     let currentConversationId = conversationId;
 
     if (!currentConversationId) {
-        // Find an admin to assign the chat to. For now, this logic is simplified.
-        // In a real app, you'd have a more robust way of assigning admins.
+        // Create a new conversation if one doesn't exist
+        const adminQuery = query(collection(firestore, 'roles_admin'), where('isAdmin', '==', true), limit(1));
+        const adminSnapshot = await getDocs(adminQuery);
+        const adminId = !adminSnapshot.empty ? adminSnapshot.docs[0].id : 'default-admin-id';
+
         const newConversationRef = doc(collection(firestore, 'conversations'));
         const newConvoData = {
             guestId: user.uid,
-            adminId: 'default-admin-id', // Placeholder, needs real logic
+            adminId: adminId, 
             createdAt: serverTimestamp(),
             lastMessageAt: serverTimestamp(),
             lastMessageText: message,
@@ -82,9 +122,15 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent className="flex flex-col p-0">
-        <SheetHeader className="p-4 border-b">
-          <SheetTitle>Contactați-ne</SheetTitle>
-          <SheetDescription>Lăsați-ne un mesaj și vă vom răspunde în curând.</SheetDescription>
+        <SheetHeader className="p-4 border-b flex-row justify-between items-center">
+          <div>
+            <SheetTitle>Contactați-ne</SheetTitle>
+            <SheetDescription>Lăsați-ne un mesaj și vă vom răspunde în curând.</SheetDescription>
+          </div>
+           <Button variant="ghost" size="sm" onClick={handleLeaveChat}>
+             <LogOut className="mr-2 h-4 w-4"/>
+             Părăsiți chat
+           </Button>
         </SheetHeader>
         <ScrollArea className="flex-1" ref={scrollAreaRef}>
             <div className="p-4 space-y-4">
@@ -133,5 +179,3 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     </Sheet>
   );
 }
-
-    
