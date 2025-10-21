@@ -276,7 +276,7 @@ export default function ConfigureLandingPage() {
                                 <CardDescription>Adăugați, editați sau ștergeți ariile de practică afișate pe pagina principală.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {practiceAreasData?.map((area: any) => (
+                                {practiceAreasData && practiceAreasData.map((area: any) => (
                                     <Card key={area.id} className="flex items-center gap-4 p-4">
                                         <AreaIcon name={area.icon} />
                                         <div className="flex-1">
