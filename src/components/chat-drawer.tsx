@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -54,8 +53,13 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   const { data: conversation } = useDoc(conversationRef);
 
   useEffect(() => {
+    // Admin requests identification and user has not identified yet.
     if (conversation?.identificationRequested && !conversation?.guestName) {
         setShowIdentification(true);
+    }
+    // If user has already provided a name, don't show the identification form.
+    if (conversation?.guestName) {
+        setShowIdentification(false);
     }
     if (conversation?.paymentLink && conversation?.paymentStatus === 'pending') {
       toDataURL(conversation.paymentLink, { width: 200 })
@@ -175,7 +179,10 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     const identificationData: { guestName?: string; guestEmail?: string, identificationRequested?: boolean } = {};
     if (guestName) identificationData.guestName = guestName;
     if (guestEmail) identificationData.guestEmail = guestEmail;
-    identificationData.identificationRequested = false; // Reset request flag
+    // Don't reset request flag if user initiates identification
+    if (conversation?.identificationRequested) {
+        identificationData.identificationRequested = false;
+    }
 
     updateDocumentNonBlocking(conversationRef, identificationData);
     
@@ -192,7 +199,7 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             {conversation?.identificationRequested ? 'Administratorul solicită identificarea' : 'Identificare Opțională'}
         </h3>
         <div className="space-y-2">
-            <Label htmlFor="guest-name">Nume *</Label>
+            <Label htmlFor="guest-name">Nume {conversation?.identificationRequested && '*'}</Label>
             <div className="relative">
                 <UserIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input id="guest-name" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Numele dvs..." className="pl-8" />
@@ -206,18 +213,21 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             </div>
         </div>
         <div className="flex justify-end gap-2">
-            {!conversation?.identificationRequested && (
+            {!(conversation?.identificationRequested && !conversation?.guestName) && (
                 <Button variant="ghost" onClick={() => setShowIdentification(false)}>Anulează</Button>
             )}
             <Button onClick={handleSaveIdentification}>Salvează</Button>
         </div>
     </div>
   );
+  
+  const isChatting = messages && messages.length > 0;
+  const isMandatoryIdentification = conversation?.identificationRequested && !conversation?.guestName;
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => {
         // Prevent closing the sheet if identification is mandatory
-        if(conversation?.identificationRequested && !conversation?.guestName) {
+        if(isMandatoryIdentification) {
             onOpenChange(true);
         } else {
             onOpenChange(open);
@@ -229,17 +239,18 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             <SheetTitle>Contactați-ne</SheetTitle>
             <SheetDescription>Lăsați-ne un mesaj și vă vom răspunde în curând.</SheetDescription>
           </div>
-           <Button variant="ghost" size="sm" onClick={handleLeaveChat} disabled={conversation?.identificationRequested && !conversation?.guestName}>
+           <Button variant="ghost" size="sm" onClick={handleLeaveChat} disabled={isMandatoryIdentification}>
              <LogOut className="mr-2 h-4 w-4"/>
              Părăsiți
            </Button>
         </SheetHeader>
         <ScrollArea className="flex-1" ref={scrollAreaRef}>
-             { !conversation?.guestName && !showIdentification && (
-                <div className="p-2 text-center">
-                    <Button variant="link" size="sm" onClick={() => setShowIdentification(true)}>
+             { !conversation?.guestName && !showIdentification && !isChatting && (
+                <div className="p-4 border-b text-center text-sm text-muted-foreground bg-secondary/30">
+                    <p className="mb-2">Sunteți conectat ca vizitator anonim. Conversația se va pierde dacă ștergeți datele de navigare.</p>
+                     <Button variant="link" size="sm" onClick={() => setShowIdentification(true)}>
                         <Info className="mr-2 h-4 w-4" />
-                        Mă identific
+                        Opțional, vă puteți identifica
                     </Button>
                 </div>
             )}
