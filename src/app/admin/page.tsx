@@ -19,7 +19,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate, Newspaper } from 'lucide-react';
+import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate, Newspaper, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -503,41 +509,32 @@ export default function AdminPage() {
         </div>
         <div className="lg:col-span-1 grid gap-8 content-start">
            <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LayoutTemplate className="h-5 w-5" />
-                Configurare Pagină
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Modificați conținutul și imaginile de pe pagina principală.
-              </p>
-              <Button asChild className='w-full'>
-                <Link href="/admin/configure-landing">
-                  Configurează Pagina Principală
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Newspaper className="h-5 w-5" />
-                Gestionare Blog
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Creați și editați articolele de pe blogul dumneavoastră.
-              </p>
-              <Button asChild className='w-full'>
-                <Link href="/admin/blog">
-                  Administrează Articolele
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                        Management Conținut
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                    <Link href="/admin/configure-landing"><LayoutTemplate className="mr-2 h-4 w-4" /> Configurează Pagina</Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/admin/blog"><Newspaper className="mr-2 h-4 w-4" /> Administrează Blog</Link>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                        Modificați conținutul paginii principale și administrați articolele de blog.
+                    </p>
+                </CardContent>
+            </Card>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

@@ -79,6 +79,13 @@ const defaultContent = {
     blog: {
         title: "Noutăți & Analize",
         subtitle: "Articole Recente"
+    },
+    contact: {
+        title: "Suntem Aici pentru a Vă Ajuta",
+        text: "Fie că aveți o întrebare, doriți să stabiliți o consultație sau aveți nevoie de asistență juridică imediată, echipa noastră este pregătită să vă răspundă.",
+        address: "Bulevardul Unirii, Nr. 1, București, România",
+        phone: "+40 21 123 4567",
+        email: "contact@avocatlaw.ro"
     }
 };
 
@@ -113,7 +120,7 @@ export default function Home() {
     if (contentData) {
       const newContent = { ...defaultContent };
       (contentData as any[]).forEach(doc => {
-        if (newContent.hasOwnProperty(doc.id)) {
+        if (newContent.hasOwnProperty(doc.id as keyof typeof defaultContent)) {
            // @ts-ignore
            newContent[doc.id] = { ...newContent[doc.id], ...doc };
         }
@@ -390,23 +397,23 @@ export default function Home() {
                  <div>
                     <span className="font-semibold text-primary uppercase tracking-wider">Contact</span>
                     <h2 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl mt-2">
-                        Suntem Aici pentru a Vă Ajuta
+                        {content.contact.title}
                     </h2>
                     <p className="mt-6 text-lg leading-8 text-foreground/80">
-                        Fie că aveți o întrebare, doriți să stabiliți o consultație sau aveți nevoie de asistență juridică imediată, echipa noastră este pregătită să vă răspundă.
+                        {content.contact.text}
                     </p>
                     <div className="mt-8 space-y-4">
                         <div className="flex items-center gap-4">
                             <MapPin className="h-6 w-6 text-primary" />
-                            <p className="text-lg">Bulevardul Unirii, Nr. 1, București, România</p>
+                            <p className="text-lg">{content.contact.address}</p>
                         </div>
                         <div className="flex items-center gap-4">
                             <Phone className="h-6 w-6 text-primary" />
-                            <p className="text-lg">+40 21 123 4567</p>
+                            <p className="text-lg">{content.contact.phone}</p>
                         </div>
                         <div className="flex items-center gap-4">
                             <Mail className="h-6 w-6 text-primary" />
-                            <p className="text-lg">contact@avocatlaw.ro</p>
+                            <p className="text-lg">{content.contact.email}</p>
                         </div>
                     </div>
                      <Button asChild size="lg" className="mt-8">
@@ -430,5 +437,3 @@ export default function Home() {
     </>
   );
 }
-
-    

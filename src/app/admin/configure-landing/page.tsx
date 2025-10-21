@@ -239,6 +239,39 @@ export default function ConfigureLandingPage() {
                         </Card>
                     </AccordionContent>
                 </AccordionItem>
+                 {/* Contact Section */}
+                <AccordionItem value="item-4">
+                    <AccordionTrigger className="text-xl font-headline bg-muted px-4 rounded-t-lg">Secțiune Contact</AccordionTrigger>
+                    <AccordionContent className="p-0">
+                        <Card className="rounded-t-none">
+                            <CardContent className="p-6 space-y-4">
+                                <div className="space-y-1">
+                                    <Label htmlFor="contact-title">Titlu</Label>
+                                    <Input id="contact-title" value={content.contact?.title || ''} onChange={(e) => handleInputChange('contact', 'title', e.target.value)} />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="contact-text">Text Introductiv</Label>
+                                    <Textarea id="contact-text" value={content.contact?.text || ''} onChange={(e) => handleInputChange('contact', 'text', e.target.value)} rows={3}/>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="contact-address">Adresă</Label>
+                                    <Input id="contact-address" value={content.contact?.address || ''} onChange={(e) => handleInputChange('contact', 'address', e.target.value)} />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="contact-phone">Telefon</Label>
+                                    <Input id="contact-phone" value={content.contact?.phone || ''} onChange={(e) => handleInputChange('contact', 'phone', e.target.value)} />
+                                </div>
+                                 <div className="space-y-1">
+                                    <Label htmlFor="contact-email">Email</Label>
+                                    <Input id="contact-email" value={content.contact?.email || ''} onChange={(e) => handleInputChange('contact', 'email', e.target.value)} />
+                                </div>
+                            </CardContent>
+                             <CardFooter className="flex justify-end">
+                                <Button onClick={() => handleSaveSection('contact')}>Salvează Secțiunea</Button>
+                            </CardFooter>
+                        </Card>
+                    </AccordionContent>
+                </AccordionItem>
             </Accordion>
              <ContentSuggestionTool
                 open={showSuggestionTool}
@@ -253,5 +286,3 @@ export default function ConfigureLandingPage() {
         </div>
     );
 }
-
-    
