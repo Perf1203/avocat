@@ -92,7 +92,7 @@ const iconMap: { [key: string]: LucideIcon } = {
 
 const AnimatedSection = ({ children, className }: { children: React.ReactNode, className?: string }) => {
     const { ref, inView } = useInView({
-        triggerOnce: true,
+        triggerOnce: false, // Set to false to re-trigger animation on scroll
         threshold: 0.1,
     });
 
@@ -111,6 +111,11 @@ function AnimatedNumber({ value, duration = 2000 }: { value: number, duration?: 
     if (inView) {
       let start = 0;
       const end = value;
+      // Avoid division by zero
+      if (end === 0) {
+        setCount(0);
+        return;
+      }
       const incrementTime = (duration / end);
 
       const timer = setInterval(() => {
@@ -197,7 +202,7 @@ export default function Home() {
                     priority
                     data-ai-hint={content.hero.imageHint}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/50 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
              </>
           )}
           
