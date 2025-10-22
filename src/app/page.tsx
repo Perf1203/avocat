@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   Gavel,
@@ -39,6 +39,8 @@ import { useFirebase, useUser, useDoc, useCollection, useMemoFirebase } from "@/
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import * as LucideIcons from 'lucide-react';
+import { useInView } from 'react-intersection-observer';
+import { cn } from "@/lib/utils";
 
 // Default Content
 const defaultContent = {
@@ -50,9 +52,9 @@ const defaultContent = {
         imageHint: "law office"
     },
     stats: [
-        { icon: "Award", value: "98%", label: "Rata de Succes" },
-        { icon: "Users", value: "1,200+", label: "Clienți Mulțumiți" },
-        { icon: "TrendingUp", value: "20+", label: "Ani de Experiență" },
+        { icon: "Award", value: 98, label: "Rata de Succes (%)" },
+        { icon: "Users", value: 1200, label: "Clienți Mulțumiți" },
+        { icon: "TrendingUp", value: 20, label: "Ani de Experiență" },
     ],
     about: {
         title: "Angajament, Integritate și Rezultate Excepționale",
@@ -87,6 +89,43 @@ const iconMap: { [key: string]: LucideIcon } = {
   Gavel, Landmark, BookOpen, PenSquare, Sparkles, Wand2, Phone, Mail, MapPin, TrendingUp, Users, Award, MessageCircle, Euro, FileText, Scale, Shield, Briefcase,
   ...LucideIcons
 };
+
+const AnimatedSection = ({ children, className }: { children: React.ReactNode, className?: string }) => {
+    const { ref, inView } = useInView({
+        triggerOnce: true,
+        threshold: 0.1,
+    });
+
+    return (
+        <div ref={ref} className={cn("transition-all duration-1000", inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10', className)}>
+            {children}
+        </div>
+    );
+};
+
+function AnimatedNumber({ value, duration = 2000 }: { value: number, duration?: number }) {
+  const [count, setCount] = useState(0);
+  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.5 });
+
+  useEffect(() => {
+    if (inView) {
+      let start = 0;
+      const end = value;
+      const incrementTime = (duration / end);
+
+      const timer = setInterval(() => {
+        start += 1;
+        setCount(start);
+        if (start === end) clearInterval(timer);
+      }, incrementTime);
+
+      return () => clearInterval(timer);
+    }
+  }, [inView, value, duration]);
+
+  return <span ref={ref}>{count}</span>;
+}
+
 
 export default function Home() {
   const { firestore } = useFirebase();
@@ -135,9 +174,9 @@ export default function Home() {
   }
   
   const AreaIcon = ({ name = 'Gavel' }: { name?: string }) => {
-    const Icon = iconMap[name] || Gavel;
-    return <Icon className="h-10 w-10 text-primary" />;
-  }
+      const Icon = iconMap[name] || Gavel;
+      return <Icon className="h-10 w-10 text-primary group-hover:text-accent transition-colors duration-300" />;
+  };
 
   const isLoading = isContentLoading || isLoadingRole;
 
@@ -145,24 +184,26 @@ export default function Home() {
     <>
       <div className="relative isolate bg-background">
         {/* Hero Section */}
-        <section className="relative h-[80vh] min-h-[600px] w-full text-white">
+        <section className="relative h-screen min-h-[700px] w-full text-white flex items-center justify-center">
           {isLoading ? (
             <Skeleton className="absolute inset-0" />
           ) : (
-            <Image
-              src={content.hero.imageUrl}
-              alt={content.hero.headline}
-              fill
-              className="object-cover"
-              priority
-              data-ai-hint={content.hero.imageHint}
-            />
+             <>
+                <Image
+                    src={content.hero.imageUrl}
+                    alt={content.hero.headline}
+                    fill
+                    className="object-cover"
+                    priority
+                    data-ai-hint={content.hero.imageHint}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/50 to-transparent" />
+             </>
           )}
-          <div className="absolute inset-0 bg-primary/70" />
           
-          <div className="relative container h-full flex flex-col items-center justify-center text-center">
+          <div className="relative container text-center z-10">
             {isLoading ? (
-                <div className="space-y-4 max-w-3xl">
+                <div className="space-y-4 max-w-3xl mx-auto">
                   <Skeleton className="h-16 w-3/4 mx-auto" />
                   <Skeleton className="h-6 w-full" />
                   <Skeleton className="h-6 w-5/6 mx-auto" />
@@ -170,14 +211,14 @@ export default function Home() {
                 </div>
               ) : (
                 <>
-                  <h1 className="font-headline text-4xl font-bold tracking-tight text-white sm:text-6xl md:text-7xl">
+                  <h1 className="font-headline text-4xl font-bold tracking-tight text-white sm:text-6xl md:text-7xl fade-in-up">
                     {content.hero.headline}
                   </h1>
-                  <p className="mt-6 max-w-3xl text-lg leading-8 text-primary-foreground/90">
+                  <p className="mt-6 max-w-3xl mx-auto text-lg leading-8 text-primary-foreground/90 fade-in-up" style={{ animationDelay: '0.2s' }}>
                     {content.hero.bodyText}
                   </p>
-                  <div className="mt-10">
-                    <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                  <div className="mt-10 fade-in-up" style={{ animationDelay: '0.4s' }}>
+                    <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 transition-transform hover:scale-105">
                       <Link href="/schedule">{content.hero.callToActionText}</Link>
                     </Button>
                   </div>
@@ -194,24 +235,28 @@ export default function Home() {
         </section>
 
         {/* Stats Section */}
-        <section className="border-b border-t bg-secondary">
+        <section className="border-b bg-background py-16 sm:py-20">
             <div className="container">
-                <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x">
-                    {content.stats.map((stat) => (
-                        <div key={stat.label} className="py-8 px-4 text-center">
-                           <div className="flex justify-center items-center gap-4">
-                             <StatIcon name={stat.icon} />
-                             <p className="text-4xl font-bold text-primary">{stat.value}</p>
-                           </div>
-                           <p className="mt-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{stat.label}</p>
-                        </div>
-                    ))}
-                </div>
+                <AnimatedSection>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-y-10 md:gap-y-0 md:gap-x-8">
+                      {(content.stats as { icon: string; value: number; label: string }[]).map((stat, index) => (
+                          <div key={stat.label} className="text-center flex flex-col items-center">
+                            <StatIcon name={stat.icon} />
+                            <p className="text-5xl font-bold text-primary mt-3">
+                              <AnimatedNumber value={stat.value} />
+                              {stat.label.includes('%') ? '%' : '+'}
+                            </p>
+                            <p className="mt-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{stat.label.replace(' (%)', '')}</p>
+                          </div>
+                      ))}
+                  </div>
+                </AnimatedSection>
             </div>
         </section>
 
         {/* About Us Section */}
         <section className="py-24 sm:py-32">
+          <AnimatedSection>
             <div className="container grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                 <div className="order-2 lg:order-1">
                     <span className="font-semibold text-primary uppercase tracking-wider">Despre Noi</span>
@@ -229,22 +274,25 @@ export default function Home() {
                     </Button>
                 </div>
                  <div className="order-1 lg:order-2">
-                    <Image 
-                        src={content.about.imageUrl} 
-                        alt="Echipa Avocat Law în discuții" 
-                        width={600}
-                        height={400}
-                        className="rounded-lg shadow-xl w-full h-auto object-cover"
-                        data-ai-hint={content.about.imageHint}
-                    />
+                    <div className="rounded-lg shadow-2xl overflow-hidden">
+                      <Image 
+                          src={content.about.imageUrl} 
+                          alt="Echipa Avocat Law în discuții" 
+                          width={600}
+                          height={400}
+                          className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-500"
+                          data-ai-hint={content.about.imageHint}
+                      />
+                    </div>
                 </div>
             </div>
+          </AnimatedSection>
         </section>
 
         {/* Practice Areas Section */}
         <section className="bg-secondary py-24 sm:py-32">
           <div className="container">
-            <div className="text-center max-w-3xl mx-auto">
+            <AnimatedSection className="text-center max-w-3xl mx-auto">
               <span className="font-semibold text-primary uppercase tracking-wider">Servicii</span>
               <h2 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl mt-2">
                 {content.practiceAreas.title}
@@ -252,21 +300,23 @@ export default function Home() {
               <p className="mt-4 text-lg leading-8 text-foreground/80">
                 {content.practiceAreas.description}
               </p>
-            </div>
-            <div className="mt-20 grid grid-cols-1 gap-12 md:grid-cols-3">
+            </AnimatedSection>
+            <div className="mt-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {arePracticeAreasLoading ? (
                  [...Array(3)].map((_, i) => (
                     <div key={i} className="text-center p-4"><Skeleton className="h-48 w-full"/></div>
                 ))
               ) : Array.isArray(practiceAreasData) && practiceAreasData.length > 0 ? (
-                practiceAreasData.map((area: any) => (
-                    <div key={area.id} className="text-center">
-                    <div className="flex justify-center mb-4"><AreaIcon name={area.icon} /></div>
-                    <h3 className="font-headline text-xl font-semibold">{area.title}</h3>
-                    <p className="mt-2 text-muted-foreground">
-                        {area.description}
-                    </p>
-                    </div>
+                practiceAreasData.map((area: any, index) => (
+                    <AnimatedSection key={area.id} style={{ animationDelay: `${index * 150}ms` }}>
+                        <div className="group text-center p-8 rounded-lg bg-background shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+                            <div className="flex justify-center mb-5"><AreaIcon name={area.icon} /></div>
+                            <h3 className="font-headline text-xl font-semibold text-primary">{area.title}</h3>
+                            <p className="mt-2 text-muted-foreground">
+                                {area.description}
+                            </p>
+                        </div>
+                    </AnimatedSection>
                 ))
               ) : (
                 <p className="col-span-full text-center text-muted-foreground">Nu există servicii adăugate.</p>
@@ -278,35 +328,37 @@ export default function Home() {
         {/* Testimonials Section */}
         <section className="py-24 sm:py-32">
             <div className="container">
-                 <div className="text-center max-w-3xl mx-auto">
+                 <AnimatedSection className="text-center max-w-3xl mx-auto">
                     <span className="font-semibold text-primary uppercase tracking-wider">Testimoniale</span>
                     <h2 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl mt-2">
                         Ce Spun Clienții Noștri
                     </h2>
-                </div>
+                </AnimatedSection>
                 <div className="mt-20 grid grid-cols-1 lg:grid-cols-2 gap-8">
                      {areTestimonialsLoading ? (
                         [...Array(2)].map((_, i) => (
                             <Card key={i} className="p-8"><Skeleton className="h-full w-full"/></Card>
                         ))
                     ) : Array.isArray(testimonialsData) && testimonialsData.length > 0 ? (
-                        testimonialsData.map((testimonial: any) => (
-                            <Card key={testimonial.id} className="p-8">
-                                <CardContent className="p-0">
-                                    <MessageCircle className="h-8 w-8 text-accent mb-4" />
-                                    <blockquote className="text-lg text-foreground/90 italic">"{testimonial.quote}"</blockquote>
-                                </CardContent>
-                                <CardFooter className="pt-6 pb-0 px-0">
-                                    <Avatar>
-                                        <AvatarImage src={testimonial.avatarUrl} alt={testimonial.author} />
-                                        <AvatarFallback>{testimonial.author.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="ml-4">
-                                        <p className="font-semibold">{testimonial.author}</p>
-                                        <p className="text-sm text-muted-foreground">{testimonial.title}</p>
-                                    </div>
-                                </CardFooter>
-                            </Card>
+                        testimonialsData.map((testimonial: any, index) => (
+                            <AnimatedSection key={testimonial.id} style={{ animationDelay: `${index * 150}ms` }}>
+                                <Card className="p-8 h-full flex flex-col">
+                                    <CardContent className="p-0 flex-grow">
+                                        <MessageCircle className="h-8 w-8 text-accent mb-4" />
+                                        <blockquote className="text-lg text-foreground/90 italic">"{testimonial.quote}"</blockquote>
+                                    </CardContent>
+                                    <CardFooter className="pt-6 pb-0 px-0 mt-4">
+                                        <Avatar>
+                                            <AvatarImage src={testimonial.avatarUrl} alt={testimonial.author} />
+                                            <AvatarFallback>{testimonial.author.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="ml-4">
+                                            <p className="font-semibold">{testimonial.author}</p>
+                                            <p className="text-sm text-muted-foreground">{testimonial.title}</p>
+                                        </div>
+                                    </CardFooter>
+                                </Card>
+                            </AnimatedSection>
                         ))
                     ) : (
                          <p className="col-span-full text-center text-muted-foreground">Nu există testimoniale adăugate.</p>
@@ -318,7 +370,7 @@ export default function Home() {
         {/* Pricing Section */}
         <section className="bg-secondary py-24 sm:py-32">
             <div className="container">
-                <div className="text-center max-w-3xl mx-auto">
+                <AnimatedSection className="text-center max-w-3xl mx-auto">
                     <span className="font-semibold text-primary uppercase tracking-wider">Prețuri</span>
                     <h2 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl mt-2">
                         {content.pricing.title}
@@ -326,36 +378,38 @@ export default function Home() {
                     <p className="mt-4 text-lg leading-8 text-foreground/80">
                        {content.pricing.description}
                     </p>
-                </div>
+                </AnimatedSection>
                 <div className="mt-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
                    {arePricesLoading ? (
                         [...Array(2)].map((_, i) => (
                             <Card key={i} className="flex flex-col"><Skeleton className="h-full w-full"/></Card>
                         ))
                    ) : Array.isArray(pricesData) && pricesData.length > 0 ? (
-                    pricesData.map((price: any) => (
-                        <Card key={price.id} className="flex flex-col text-center">
-                            <CardHeader>
-                                <CardTitle className="font-headline text-2xl flex items-center justify-center gap-2">
-                                     {price.type === 'flat' ? <Euro /> : <FileText />}
-                                    {price.title}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                                {price.type === 'flat' && price.flatRate &&
-                                    <p className="text-5xl font-bold mb-2">{price.flatRate}<span className="text-3xl text-muted-foreground">€</span></p>
-                                }
-                                {price.type === 'hourly' && price.pricePerHour &&
-                                    <p className="text-5xl font-bold mb-2">{price.pricePerHour}<span className="text-lg font-normal text-muted-foreground">€/oră</span></p>
-                                }
-                                <p className="text-muted-foreground mt-4">{price.description}</p>
-                            </CardContent>
-                            <CardFooter>
-                                <Button asChild className="w-full">
-                                    <Link href="/schedule">Programează o Consultație</Link>
-                                </Button>
-                            </CardFooter>
-                        </Card>
+                    pricesData.map((price: any, index) => (
+                        <AnimatedSection key={price.id} style={{ animationDelay: `${index * 150}ms` }}>
+                            <Card className="flex flex-col text-center rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                                <CardHeader className="bg-primary/5 rounded-t-lg">
+                                    <CardTitle className="font-headline text-2xl flex items-center justify-center gap-2 text-primary">
+                                        {price.type === 'flat' ? <Euro /> : <FileText />}
+                                        {price.title}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="flex-grow p-8">
+                                    {price.type === 'flat' && price.flatRate &&
+                                        <p className="text-6xl font-bold text-primary">{price.flatRate}<span className="text-3xl text-primary/80">€</span></p>
+                                    }
+                                    {price.type === 'hourly' && price.pricePerHour &&
+                                        <p className="text-6xl font-bold text-primary">{price.pricePerHour}<span className="text-xl font-normal text-muted-foreground">€/oră</span></p>
+                                    }
+                                    <p className="text-muted-foreground mt-6">{price.description}</p>
+                                </CardContent>
+                                <CardFooter className="p-6 bg-primary/5 rounded-b-lg">
+                                    <Button asChild className="w-full" variant="secondary">
+                                        <Link href="/schedule">Programează o Consultație</Link>
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        </AnimatedSection>
                     ))
                    ) : (
                     <p className="col-span-full text-center text-muted-foreground">Prețurile nu au fost încă configurate.</p>
@@ -367,36 +421,38 @@ export default function Home() {
         {/* Blog Section */}
         <section className="py-24 sm:py-32">
             <div className="container">
-                <div className="text-center max-w-3xl mx-auto">
+                <AnimatedSection className="text-center max-w-3xl mx-auto">
                     <span className="font-semibold text-primary uppercase tracking-wider">{content.blog.title}</span>
                     <h2 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl mt-2">
                         {content.blog.subtitle}
                     </h2>
-                </div>
+                </AnimatedSection>
                 <div className="mt-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                      {areBlogPostsLoading ? (
                         [...Array(3)].map((_, i) => (
                             <Card key={i} className="overflow-hidden flex flex-col"><Skeleton className="h-full w-full"/></Card>
                         ))
                     ) : Array.isArray(blogPosts) && blogPosts.length > 0 ? (
-                        blogPosts.map((post: any) => (
-                            <Card key={post.id} className="overflow-hidden flex flex-col">
-                               <div className="h-56 relative w-full">
-                                 <Image src={post.imageUrl || ""} alt={post.title} fill className="object-cover" data-ai-hint={post.imageHint} />
-                               </div>
-                                <CardHeader>
-                                    <p className="text-sm text-muted-foreground">{post.date}</p>
-                                    <CardTitle className="font-headline text-xl">{post.title}</CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex-grow">
-                                    <p className="text-muted-foreground">{post.excerpt}</p>
-                                </CardContent>
-                                <CardFooter>
-                                    <Button asChild variant="link" className="p-0">
-                                      <Link href={`/blog/${post.slug}`}>Citește mai mult</Link>
-                                    </Button>
-                                </CardFooter>
-                            </Card>
+                        blogPosts.slice(0, 3).map((post: any, index) => (
+                            <AnimatedSection key={post.id} style={{ animationDelay: `${index * 150}ms` }}>
+                                <Card className="overflow-hidden flex flex-col group shadow-lg hover:shadow-2xl transition-all duration-300 rounded-lg">
+                                    <div className="h-56 relative w-full overflow-hidden">
+                                        <Image src={post.imageUrl || ""} alt={post.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" data-ai-hint={post.imageHint} />
+                                    </div>
+                                    <CardHeader>
+                                        <p className="text-sm text-muted-foreground">{post.date}</p>
+                                        <CardTitle className="font-headline text-xl group-hover:text-accent transition-colors">{post.title}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="flex-grow">
+                                        <p className="text-muted-foreground">{post.excerpt}</p>
+                                    </CardContent>
+                                    <CardFooter>
+                                        <Button asChild variant="link" className="p-0 text-primary">
+                                        <Link href={`/blog/${post.slug}`}>Citește mai mult</Link>
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
+                            </AnimatedSection>
                         ))
                     ) : (
                          <p className="col-span-full text-center text-muted-foreground">Nu există articole de blog.</p>
@@ -407,7 +463,8 @@ export default function Home() {
 
         {/* Contact & Map Section */}
         <section className="bg-secondary py-24 sm:py-32">
-            <div className="container grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+          <AnimatedSection>
+            <div className="container grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                  <div>
                     <span className="font-semibold text-primary uppercase tracking-wider">Contact</span>
                     <h2 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl mt-2">
@@ -446,10 +503,9 @@ export default function Home() {
                     </iframe>
                 </div>
             </div>
+          </AnimatedSection>
         </section>
       </div>
     </>
   );
 }
-
-  
