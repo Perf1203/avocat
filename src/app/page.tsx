@@ -202,11 +202,11 @@ export default function Home() {
                     priority
                     data-ai-hint={content.hero.imageHint}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/30 to-transparent" />
              </>
           )}
           
-          <div className="relative container text-center z-10">
+          <div className="relative container text-center z-10" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
             {isLoading ? (
                 <div className="space-y-4 max-w-3xl mx-auto">
                   <Skeleton className="h-16 w-3/4 mx-auto" />
