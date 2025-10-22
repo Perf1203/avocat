@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -67,6 +68,7 @@ export default function AdminPage() {
   const { toast } = useToast();
 
   const [isPublicRegistrationOpen, setIsPublicRegistrationOpen] = useState(false);
+  const [websiteName, setWebsiteName] = useState('');
   
   const [durationHours, setDurationHours] = useState(2);
   const [durationMinutes, setDurationMinutes] = useState(30);
@@ -119,6 +121,7 @@ export default function AdminPage() {
       const totalMinutes = scheduleSettings.appointmentDurationMinutes || 150;
       setDurationHours(Math.floor(totalMinutes / 60));
       setDurationMinutes(totalMinutes % 60);
+      setWebsiteName(scheduleSettings.websiteName || 'Avocat Law');
 
       setAvailableHours(scheduleSettings.availableHours || []);
       setAvailableDays(scheduleSettings.availableDays || []);
@@ -196,6 +199,15 @@ export default function AdminPage() {
       description: `Înregistrarea publică a fost ${isOpen ? 'activată' : 'dezactivată'}.`,
     });
   };
+
+  const handleAdminSettingsUpdate = (field: string, value: any) => {
+    if (!scheduleSettingsRef) return;
+    updateDocumentNonBlocking(scheduleSettingsRef, { [field]: value });
+     toast({
+      title: 'Setări actualizate',
+      description: 'Modificările au fost salvate.',
+    });
+  }
   
   const handleTimeToggle = (time: string) => {
     if (!scheduleSettingsRef) return;
@@ -542,7 +554,16 @@ export default function AdminPage() {
                 Setări Generale
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+               <div className="space-y-2">
+                  <Label htmlFor="website-name">Nume Website</Label>
+                  <Input
+                    id="website-name"
+                    value={websiteName}
+                    onChange={(e) => setWebsiteName(e.target.value)}
+                    onBlur={() => handleAdminSettingsUpdate('websiteName', websiteName)}
+                  />
+                </div>
               {isLoadingRegistration ? (
                  <div className="flex items-center justify-between space-x-2">
                     <Skeleton className="h-5 w-40" />

@@ -19,6 +19,13 @@ export function ChatWidget() {
   const [isAuthInProgress, setIsAuthInProgress] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
+  const adminRoleRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'roles_admin', user.uid);
+  }, [firestore, user]);
+  const { data: adminRole, isLoading: isLoadingRole } = useDoc(adminRoleRef);
+  const isUserAdmin = adminRole?.isAdmin === true;
+
   useEffect(() => {
     const storedId = localStorage.getItem('conversationId');
     if (storedId) {
@@ -74,7 +81,7 @@ export function ChatWidget() {
     return <MessageSquare className="h-6 w-6" />;
   };
 
-  if (isLoadingSettings || !settings?.isChatEnabled || isBlocked || isLoadingConversation) {
+  if (isLoadingSettings || !settings?.isChatEnabled || isBlocked || isLoadingConversation || isUserAdmin) {
     return null;
   }
 

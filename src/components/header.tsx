@@ -94,8 +94,8 @@ export function Header() {
           <Link
             href="/admin"
             className={cn(
-              "transition-colors hover:text-primary",
-              pathname === "/admin" ? "text-primary" : "text-muted-foreground"
+              "transition-colors hover:text-primary font-bold",
+              pathname.startsWith('/admin') ? "text-primary" : "text-muted-foreground"
             )}
             onClick={() => setIsMobileMenuOpen(false)}
           >
@@ -152,8 +152,7 @@ export function Header() {
           
           <div className="md:hidden">
               <Link href="/">
-                <Scale className="h-8 w-8 text-primary" />
-                <span className="sr-only">Avocat Law</span>
+                <Logo />
               </Link>
           </div>
 

@@ -166,37 +166,37 @@ export default function ChatConversationPage() {
   return (
     <div className="container py-12">
       <Card className="mx-auto max-w-3xl h-[calc(100vh-12rem)] flex flex-col">
-        <CardHeader className="flex-row items-center justify-between border-b">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" asChild>
+        <CardHeader className="flex-row items-center justify-between border-b gap-2">
+          <div className="flex items-center gap-3 overflow-hidden">
+            <Button variant="ghost" size="icon" asChild className="shrink-0">
                 <Link href="/admin">
                 <ArrowLeft />
                 </Link>
             </Button>
-             <Avatar>
+             <Avatar className="shrink-0">
                 <AvatarFallback><CircleUserRound /></AvatarFallback>
              </Avatar>
-             <div>
-                <CardTitle>Conversație cu {guestDisplayName}</CardTitle>
-                {guestDisplayInfo && <p className="text-xs text-muted-foreground">{guestDisplayInfo}</p>}
+             <div className="overflow-hidden">
+                <CardTitle className="truncate">Conversație cu {guestDisplayName}</CardTitle>
+                {guestDisplayInfo && <p className="text-xs text-muted-foreground truncate">{guestDisplayInfo}</p>}
              </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {isGuestAnonymous && (
-                <Button variant="outline" size="sm" onClick={handleRequestIdentification}>
-                <UserPlus className="mr-2 h-4 w-4"/>
-                Solicită Identificare
+                <Button variant="outline" size="sm" onClick={handleRequestIdentification} className="text-xs px-2 sm:px-3">
+                <UserPlus className="mr-1 h-4 w-4"/>
+                Solicită
                 </Button>
             )}
              {conversation?.paymentStatus === 'pending' ? (
-                <Button size="sm" onClick={handleConfirmPayment}>
-                    <CheckCircle className="mr-2 h-4 w-4"/>
-                    Confirmă Plata
+                <Button size="sm" onClick={handleConfirmPayment} className="text-xs px-2 sm:px-3">
+                    <CheckCircle className="mr-1 h-4 w-4"/>
+                    Confirmă
                 </Button>
              ) : (
-                <Button size="sm" onClick={() => setShowPaymentDialog(true)}>
-                    <CreditCard className="mr-2 h-4 w-4"/>
-                    Solicită Plată
+                <Button size="sm" onClick={() => setShowPaymentDialog(true)} className="text-xs px-2 sm:px-3">
+                    <CreditCard className="mr-1 h-4 w-4"/>
+                    Plată
                 </Button>
              )}
           </div>
@@ -292,5 +292,3 @@ export default function ChatConversationPage() {
     </div>
   );
 }
-
-    

@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, LogOut, User as UserIcon, Mail, Info, CreditCard } from 'lucide-react';
+import { Send, LogOut, User as UserIcon, Mail, Info, CreditCard, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -259,6 +260,13 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             {messages && messages.map((msg: any) => {
                  if (msg.isSystemMessage) {
                     if (msg.systemMessageType === 'payment_request' && msg.paymentLink) {
+                        if (conversation?.paymentStatus === 'paid') {
+                            return (
+                                <div key={msg.id} className="text-center text-xs text-muted-foreground my-4 p-2 bg-green-100 dark:bg-green-900/50 rounded-md flex items-center justify-center gap-2">
+                                    <CheckCircle className="h-4 w-4 text-green-600" /> Plata a fost efectuată cu succes.
+                                </div>
+                            )
+                        }
                         return (
                              <div key={msg.id} className="p-4 my-2 rounded-lg border bg-secondary/50 text-center">
                                 <h4 className="font-semibold flex items-center justify-center gap-2 mb-3"><CreditCard /> Solicitare de Plată</h4>
@@ -334,5 +342,3 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     </Sheet>
   );
 }
-
-    
