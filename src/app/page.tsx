@@ -396,7 +396,7 @@ export default function Home() {
                             <Card className="flex flex-col text-center rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
                                 <CardHeader className="bg-primary/5 rounded-t-lg">
                                     <CardTitle className="font-headline text-2xl flex items-center justify-center gap-2 text-primary">
-                                        {price.type === 'flat' ? <Euro /> : <FileText />}
+
                                         {price.title}
                                     </CardTitle>
                                 </CardHeader>
