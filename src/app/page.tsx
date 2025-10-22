@@ -131,8 +131,9 @@ export default function Home() {
     return Icon ? <Icon className="h-8 w-8 text-accent" /> : null;
   }
   
-  const AreaIcon = () => {
-    return <Gavel className="h-10 w-10 text-primary" />;
+  const AreaIcon = ({ name = 'Gavel' }: { name?: string }) => {
+    const Icon = iconMap[name] || Gavel;
+    return <Icon className="h-10 w-10 text-primary" />;
   }
 
   const isLoading = isContentLoading || isLoadingRole;
@@ -257,7 +258,7 @@ export default function Home() {
               ) : Array.isArray(practiceAreasData) && practiceAreasData.length > 0 ? (
                 practiceAreasData.map((area: any) => (
                     <div key={area.id} className="text-center">
-                    <div className="flex justify-center mb-4"><AreaIcon /></div>
+                    <div className="flex justify-center mb-4"><AreaIcon name={area.icon} /></div>
                     <h3 className="font-headline text-xl font-semibold">{area.title}</h3>
                     <p className="mt-2 text-muted-foreground">
                         {area.description}
@@ -447,3 +448,5 @@ export default function Home() {
     </>
   );
 }
+
+  
