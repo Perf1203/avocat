@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { ArrowLeft, Wand2, PlusCircle, Edit, Trash2, type LucideIcon, Gavel, BookOpen, PenSquare } from 'lucide-react';
+import { ArrowLeft, Wand2, PlusCircle, Edit, Trash2, type LucideIcon, Gavel, BookOpen, PenSquare, Scale, Landmark, Shield, Briefcase, FileText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { ContentSuggestionTool } from '@/components/content-suggestion-tool';
@@ -43,6 +43,11 @@ const iconMap: { [key: string]: LucideIcon } = {
     Gavel,
     BookOpen,
     PenSquare,
+    Scale,
+    Landmark,
+    Shield,
+    Briefcase,
+    FileText,
 };
 
 const AreaIcon = ({ name = 'Gavel' }: { name?: string }) => {

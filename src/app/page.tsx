@@ -19,6 +19,9 @@ import {
   MessageCircle,
   Euro,
   FileText,
+  Shield,
+  Briefcase,
+  Scale,
   type LucideIcon
 } from "lucide-react";
 import Link from "next/link";
@@ -81,7 +84,7 @@ const defaultContent = {
 };
 
 const iconMap: { [key: string]: LucideIcon } = {
-  Gavel, Landmark, BookOpen, PenSquare, Sparkles, Wand2, Phone, Mail, MapPin, TrendingUp, Users, Award, MessageCircle, Euro, FileText,
+  Gavel, Landmark, BookOpen, PenSquare, Sparkles, Wand2, Phone, Mail, MapPin, TrendingUp, Users, Award, MessageCircle, Euro, FileText, Scale, Shield, Briefcase,
   ...LucideIcons
 };
 

@@ -18,9 +18,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Gavel, BookOpen, PenSquare } from 'lucide-react';
+import { Gavel, BookOpen, PenSquare, Scale, Landmark, Shield, Briefcase, FileText, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type PracticeAreaFormData = z.infer<typeof PracticeAreaSchema>;
 
@@ -31,10 +31,15 @@ interface PracticeAreaDialogProps {
   onSave: (data: PracticeAreaFormData) => void;
 }
 
-const availableIcons = [
-    { name: 'Gavel', Icon: Gavel, label: 'Martillo' },
-    { name: 'BookOpen', Icon: BookOpen, label: 'Libro' },
-    { name: 'PenSquare', Icon: PenSquare, label: 'Lápiz' },
+const availableIcons: { name: string; label: string; Icon: LucideIcon }[] = [
+    { name: 'Gavel', Icon: Gavel, label: 'Ciocan (Justiție)' },
+    { name: 'BookOpen', Icon: BookOpen, label: 'Carte (Cunoaștere)' },
+    { name: 'PenSquare', Icon: PenSquare, label: 'Stilou (Contracte)' },
+    { name: 'Scale', Icon: Scale, label: 'Balanță (Echilibru)' },
+    { name: 'Landmark', Icon: Landmark, label: 'Tribunal (Drept Public)' },
+    { name: 'Shield', Icon: Shield, label: 'Scut (Protecție)' },
+    { name: 'Briefcase', Icon: Briefcase, label: 'Servietă (Drept Corporativ)' },
+    { name: 'FileText', Icon: FileText, label: 'Document (Litigii)' },
 ];
 
 export function PracticeAreaDialog({ isOpen, onOpenChange, area, onSave }: PracticeAreaDialogProps) {
@@ -46,8 +51,6 @@ export function PracticeAreaDialog({ isOpen, onOpenChange, area, onSave }: Pract
   });
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = form;
-
-  const selectedIcon = watch('icon');
 
   useEffect(() => {
     if (area) {
@@ -89,22 +92,22 @@ export function PracticeAreaDialog({ isOpen, onOpenChange, area, onSave }: Pract
           
            <div className="space-y-2">
             <Label>Selectează Icon</Label>
-            <RadioGroup
-                onValueChange={(value) => setValue('icon', value)}
-                value={selectedIcon}
-                className="grid grid-cols-3 gap-4"
-            >
-                {availableIcons.map(({ name, Icon }) => (
-                     <Label key={name} htmlFor={name} className={cn(
-                        "flex flex-col items-center justify-center gap-2 border rounded-md p-4 cursor-pointer",
-                        "hover:bg-accent hover:text-accent-foreground",
-                        selectedIcon === name && "bg-primary text-primary-foreground border-primary"
-                     )}>
-                        <RadioGroupItem value={name} id={name} className="sr-only" />
-                        <Icon className="h-8 w-8" />
-                    </Label>
-                ))}
-            </RadioGroup>
+            <Select onValueChange={(value) => setValue('icon', value)} defaultValue={area?.icon || 'Gavel'}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Selectează un icon..." />
+                </SelectTrigger>
+                <SelectContent>
+                    {availableIcons.map(({ name, label, Icon }) => (
+                        <SelectItem key={name} value={name}>
+                            <div className="flex items-center gap-2">
+                                <Icon className="h-4 w-4" />
+                                <span>{label}</span>
+                            </div>
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            {errors.icon && <p className="text-sm text-destructive">{errors.icon.message}</p>}
           </div>
 
           <DialogFooter>
