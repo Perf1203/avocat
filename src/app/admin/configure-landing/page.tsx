@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { ArrowLeft, Wand2, PlusCircle, Edit, Trash2, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Wand2, PlusCircle, Edit, Trash2, type LucideIcon, Gavel } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { ContentSuggestionTool } from '@/components/content-suggestion-tool';
@@ -39,11 +39,8 @@ import { PriceDialog } from '@/components/price-dialog';
 import { PracticeAreaDialog } from '@/components/practice-area-dialog';
 import * as LucideIcons from 'lucide-react';
 
-const iconMap: { [key: string]: LucideIcon } = LucideIcons;
-
-const AreaIcon = ({ name }: { name: string }) => {
-    const Icon = iconMap[name];
-    return Icon ? <Icon className="h-5 w-5 text-primary" /> : null;
+const AreaIcon = () => {
+    return <Gavel className="h-5 w-5 text-primary" />;
 };
 
 
@@ -278,7 +275,7 @@ export default function ConfigureLandingPage() {
                             <CardContent className="space-y-4">
                                 {Array.isArray(practiceAreasData) && practiceAreasData.map((area: any) => (
                                     <Card key={area.id} className="flex items-center gap-4 p-4">
-                                        <AreaIcon name={area.icon} />
+                                        <AreaIcon />
                                         <div className="flex-1">
                                             <p className="font-semibold">{area.title}</p>
                                             <p className="text-sm text-foreground/80">{area.description}</p>

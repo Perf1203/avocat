@@ -62,7 +62,7 @@ export const PriceSchema = z.object({
 });
 
 export const PracticeAreaSchema = z.object({
-  icon: z.string().min(2, { message: "Numele iconului trebuie să aibă cel puțin 2 caractere."}),
+  icon: z.string().min(2, { message: "Numele iconului trebuie să aibă cel puțin 2 caractere."}).optional(),
   title: z.string().min(5, { message: "Titlul trebuie să aibă cel puțin 5 caractere." }),
   description: z.string().min(10, { message: "Descrierea trebuie să aibă cel puțin 10 caractere." }),
 });
