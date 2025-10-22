@@ -52,14 +52,14 @@ const allPossibleTimes = [
 ];
 
 const daysOfWeek = [
-    { name: 'Duminică', value: 0 },
-    { name: 'Luni', value: 1 },
-    { name: 'Marți', value: 2 },
-    { name: 'Miercuri', value: 3 },
-    { name: 'Joi', value: 4 },
-    { name: 'Vineri', value: 5 },
-    { name: 'Sâmbătă', value: 6 },
-]
+    { name: 'D', value: 0, label: 'Duminică' },
+    { name: 'L', value: 1, label: 'Luni' },
+    { name: 'M', value: 2, label: 'Marți' },
+    { name: 'Mi', value: 3, label: 'Miercuri' },
+    { name: 'J', value: 4, label: 'Joi' },
+    { name: 'V', value: 5, label: 'Vineri' },
+    { name: 'S', value: 6, label: 'Sâmbătă' },
+];
 
 export default function AdminPage() {
   const { firestore } = useFirebase();
@@ -213,9 +213,12 @@ export default function AdminPage() {
     if (!scheduleSettingsRef) return;
     
     const isCurrentlyAvailable = availableHours.includes(time);
+    const newAvailableHours = isCurrentlyAvailable
+        ? availableHours.filter(t => t !== time)
+        : [...availableHours, time];
     
     updateDocumentNonBlocking(scheduleSettingsRef, {
-        availableHours: isCurrentlyAvailable ? arrayRemove(time) : arrayUnion(time)
+        availableHours: newAvailableHours
     });
     
     toast({
@@ -228,9 +231,12 @@ export default function AdminPage() {
     if (!scheduleSettingsRef) return;
     
     const isCurrentlyAvailable = availableDays.includes(dayValue);
+     const newAvailableDays = isCurrentlyAvailable
+        ? availableDays.filter(d => d !== dayValue)
+        : [...availableDays, dayValue];
     
     updateDocumentNonBlocking(scheduleSettingsRef, {
-        availableDays: isCurrentlyAvailable ? arrayRemove(dayValue) : arrayUnion(dayValue)
+        availableDays: newAvailableDays
     });
     
     toast({
@@ -287,11 +293,11 @@ export default function AdminPage() {
 
   return (
     <div className="container py-12">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <h1 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl">
           Panou de Administrare
         </h1>
-        <Button asChild>
+        <Button asChild className="w-full sm:w-auto">
           <Link href="/">Înapoi la Acasă</Link>
         </Button>
       </div>
@@ -307,12 +313,12 @@ export default function AdminPage() {
             <CardContent>
               {isLoadingConversations ? (
                 <div className="space-y-2">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-24 w-full" />
                 </div>
               ) : conversations && conversations.length > 0 ? (
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="hidden sm:table-header-group">
                     <TableRow>
                       <TableHead>Vizitator</TableHead>
                       <TableHead>Ultimul Mesaj</TableHead>
@@ -320,10 +326,10 @@ export default function AdminPage() {
                       <TableHead className="text-right">Acțiuni</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="sm:table-row-group">
                     {conversations.map((convo: any) => (
-                      <TableRow key={convo.id} className={cn(convo.isBlocked && "bg-muted/50")}>
-                        <TableCell>
+                      <TableRow key={convo.id} className={cn("block sm:table-row mb-4 sm:mb-0 border sm:border-b rounded-lg sm:rounded-none", convo.isBlocked && "bg-muted/50")}>
+                        <TableCell className="block sm:table-cell font-medium before:content-['Vizitator:'] before:font-bold before:mr-2 sm:before:content-none">
                             <div className="font-medium flex items-center gap-2">
                                 <CircleUserRound className="text-muted-foreground"/>
                                 <div className="flex flex-col">
@@ -332,9 +338,9 @@ export default function AdminPage() {
                                 </div>
                             </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground truncate max-w-xs">{convo.lastMessageText}</TableCell>
-                        <TableCell>{convo.lastMessageAt && format(convo.lastMessageAt.toDate(), 'PPP p')}</TableCell>
-                        <TableCell className="text-right space-x-1">
+                        <TableCell className="block sm:table-cell text-muted-foreground truncate max-w-xs before:content-['Mesaj:'] before:font-bold before:mr-2 sm:before:content-none">{convo.lastMessageText}</TableCell>
+                        <TableCell className="block sm:table-cell before:content-['Data:'] before:font-bold before:mr-2 sm:before:content-none">{convo.lastMessageAt && format(convo.lastMessageAt.toDate(), 'PPP p')}</TableCell>
+                        <TableCell className="block sm:table-cell text-right space-x-1">
                           <Button asChild variant="outline" size="sm">
                             <Link href={`/admin/chat/${convo.id}`}>Răspunde</Link>
                           </Button>
@@ -381,21 +387,18 @@ export default function AdminPage() {
               <CardTitle>Programări Agendate</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoadingAppointments && (
-                <div className="space-y-2">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
+              {isLoadingAppointments ? (
+                 <div className="space-y-2">
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-24 w-full" />
                 </div>
-              )}
-              {appointmentsError && (
+              ) : appointmentsError ? (
                 <p className="text-destructive">
                   Eroare la încărcarea programărilor: {appointmentsError.message}.
                 </p>
-              )}
-              {!isLoadingAppointments && !appointmentsError && appointments && (
+              ) : appointments && appointments.length > 0 ? (
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="hidden sm:table-header-group">
                     <TableRow>
                       <TableHead>Client</TableHead>
                       <TableHead>Data și Ora</TableHead>
@@ -403,20 +406,20 @@ export default function AdminPage() {
                       <TableHead className="text-right">Acțiuni</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="sm:table-row-group">
                     {appointments.map((apt: any) => (
-                      <TableRow key={apt.id}>
-                        <TableCell>
+                      <TableRow key={apt.id} className="block sm:table-row mb-4 sm:mb-0 border sm:border-b rounded-lg sm:rounded-none">
+                        <TableCell className="block sm:table-cell before:content-['Client:'] before:font-bold before:mr-2 sm:before:content-none">
                           <div className="font-medium">{apt.clientName}</div>
                           <div className="text-sm text-muted-foreground">{apt.clientEmail}</div>
                           </TableCell>
-                        <TableCell>
+                        <TableCell className="block sm:table-cell before:content-['Data:'] before:font-bold before:mr-2 sm:before:content-none">
                           {apt.startTime && format(apt.startTime.toDate(), 'PPP p')}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="block sm:table-cell before:content-['Status:'] before:font-bold before:mr-2 sm:before:content-none">
                           <Badge>{apt.status}</Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="block sm:table-cell text-right">
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -443,8 +446,7 @@ export default function AdminPage() {
                     ))}
                   </TableBody>
                 </Table>
-              )}
-              {!isLoadingAppointments && appointments?.length === 0 && (
+              ) : (
                 <div className="text-center text-muted-foreground py-8">
                   Nu există programări agendate.
                 </div>
@@ -457,33 +459,30 @@ export default function AdminPage() {
               <CardTitle>Clienți Înregistrați</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoadingClients && (
-                <div className="space-y-2">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
+              {isLoadingClients ? (
+                 <div className="space-y-2">
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-24 w-full" />
                 </div>
-              )}
-              {clientsError && (
+              ) : clientsError ? (
                 <p className="text-destructive">
                   Eroare la încărcarea clienților: {clientsError.message}.
                 </p>
-              )}
-              {!isLoadingClients && !clientsError && clients && (
+              ) : clients && clients.length > 0 ? (
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="hidden sm:table-header-group">
                     <TableRow>
                       <TableHead>Nume</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead className="text-right">Acțiuni</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="sm:table-row-group">
                     {clients.map((client: any) => (
-                      <TableRow key={client.id}>
-                        <TableCell>{client.firstName} {client.lastName}</TableCell>
-                        <TableCell>{client.email}</TableCell>
-                        <TableCell className="text-right">
+                      <TableRow key={client.id} className="block sm:table-row mb-4 sm:mb-0 border sm:border-b rounded-lg sm:rounded-none">
+                        <TableCell className="block sm:table-cell before:content-['Nume:'] before:font-bold before:mr-2 sm:before:content-none">{client.firstName} {client.lastName}</TableCell>
+                        <TableCell className="block sm:table-cell before:content-['Email:'] before:font-bold before:mr-2 sm:before:content-none">{client.email}</TableCell>
+                        <TableCell className="block sm:table-cell text-right">
                           <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon">
@@ -510,8 +509,7 @@ export default function AdminPage() {
                     ))}
                   </TableBody>
                 </Table>
-              )}
-              {!isLoadingClients && clients?.length === 0 && (
+              ) : (
                 <div className="text-center text-muted-foreground py-8">
                   Nu există clienți înregistrați.
                 </div>
@@ -698,13 +696,14 @@ export default function AdminPage() {
                   
                   <div>
                     <Label>Zile Disponibile</Label>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                    <div className="grid grid-cols-4 gap-2 mt-2">
                       {daysOfWeek.map((day) => (
                         <Button
                           key={day.value}
                           variant={availableDays.includes(day.value) ? "default" : "outline"}
                           onClick={() => handleDayToggle(day.value)}
                           className={cn("transition-colors text-xs px-2 h-8", availableDays.includes(day.value) && "bg-primary text-primary-foreground")}
+                          title={day.label}
                         >
                           {day.name}
                         </Button>
