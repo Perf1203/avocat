@@ -45,8 +45,8 @@ import { cn } from "@/lib/utils";
 // Default Content
 const defaultContent = {
     hero: {
-        headline: "Partenerul Dumneavoastră Strategic în Navigarea Complexității Juridice",
-        bodyText: "La Avocat Law, combinăm expertiza aprofundată cu o abordare personalizată pentru a oferi soluții juridice inovatoare și eficiente, asigurând succesul și protecția intereselor dumneavoastră.",
+        headline: "Expertiză Juridică de Încredere pentru Provocări Moderne",
+        bodyText: "Avocat Law oferă servicii juridice de prim rang, adaptate nevoilor dumneavoastră unice. Echipa noastră de avocați cu experiență este dedicată obținerii celor mai bune rezultate posibile pentru clienții noștri prin consiliere strategică și pledoarie neobosită.",
         callToActionText: "Programează o Consultație",
         imageUrl: "https://i.postimg.cc/13Yp8kG1/bermix-studio-a-VCH-3-B-7-E-unsplash.jpg",
         imageHint: "law office"
@@ -92,7 +92,7 @@ const iconMap: { [key: string]: LucideIcon } = {
 
 const AnimatedSection = ({ children, className }: { children: React.ReactNode, className?: string }) => {
     const { ref, inView } = useInView({
-        triggerOnce: false, // Set to false to re-trigger animation on scroll
+        triggerOnce: false,
         threshold: 0.1,
     });
 
@@ -187,48 +187,49 @@ export default function Home() {
 
   return (
     <>
-      <div className="relative isolate bg-background">
+      <div className="relative isolate">
         {/* Hero Section */}
-        <section className="relative h-screen min-h-[700px] w-full text-white flex items-center justify-center">
+        <section className="relative h-[60vh] min-h-[500px] w-full">
           {isLoading ? (
             <Skeleton className="absolute inset-0" />
           ) : (
-             <>
-                <Image
-                    src={content.hero.imageUrl}
-                    alt={content.hero.headline}
-                    fill
-                    className="object-cover"
-                    priority
-                    data-ai-hint={content.hero.imageHint}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/30 to-transparent" />
-             </>
+            <Image
+              src={content.hero.imageUrl}
+              alt={content.hero.headline}
+              fill
+              className="object-cover"
+              priority
+              data-ai-hint={content.hero.imageHint}
+            />
           )}
+          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-transparent" />
           
-          <div className="relative container text-center z-10" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
-            {isLoading ? (
-                <div className="space-y-4 max-w-3xl mx-auto">
-                  <Skeleton className="h-16 w-3/4 mx-auto" />
-                  <Skeleton className="h-6 w-full" />
-                  <Skeleton className="h-6 w-5/6 mx-auto" />
-                  <Skeleton className="h-12 w-48 mt-4 mx-auto" />
-                </div>
-              ) : (
-                <>
-                  <h1 className="font-headline text-4xl font-bold tracking-tight text-white sm:text-6xl md:text-7xl fade-in-up">
-                    {content.hero.headline}
-                  </h1>
-                  <p className="mt-6 max-w-3xl mx-auto text-lg leading-8 text-primary-foreground/90 fade-in-up" style={{ animationDelay: '0.2s' }}>
-                    {content.hero.bodyText}
-                  </p>
-                  <div className="mt-10 fade-in-up" style={{ animationDelay: '0.4s' }}>
-                    <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 transition-transform hover:scale-105">
-                      <Link href="/schedule">{content.hero.callToActionText}</Link>
-                    </Button>
+          <div className="relative container h-full flex flex-col justify-end pb-12 text-left">
+            <div className="max-w-2xl">
+              {isLoading ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-16 w-3/4" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-5/6" />
+                    <Skeleton className="h-12 w-48 mt-4" />
                   </div>
-                </>
-              )}
+                ) : (
+                  <>
+                    <h1 className="font-headline text-4xl font-bold tracking-tight text-primary sm:text-6xl">
+                      {content.hero.headline}
+                    </h1>
+                    <p className="mt-6 text-lg leading-8 text-foreground/80">
+                      {content.hero.bodyText}
+                    </p>
+                    <div className="mt-10">
+                      <Button asChild size="lg">
+                        <Link href="/schedule">{content.hero.callToActionText}</Link>
+                      </Button>
+                    </div>
+                  </>
+                )}
+            </div>
           </div>
           {isUserAdmin && (
             <div className="absolute bottom-6 right-6 z-40">
