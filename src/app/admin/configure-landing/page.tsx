@@ -39,19 +39,9 @@ import { PriceDialog } from '@/components/price-dialog';
 import { PracticeAreaDialog } from '@/components/practice-area-dialog';
 import * as LucideIcons from 'lucide-react';
 
-const iconMap: { [key: string]: LucideIcon } = {
-    Gavel,
-    BookOpen,
-    PenSquare,
-    Scale,
-    Landmark,
-    Shield,
-    Briefcase,
-    FileText,
-};
 
 const AreaIcon = ({ name = 'Gavel' }: { name?: string }) => {
-    const Icon = iconMap[name] || Gavel;
+    const Icon = (LucideIcons as any)[name] || Gavel;
     return <Icon className="h-5 w-5 text-primary" />;
 };
 
@@ -94,6 +84,20 @@ export default function ConfigureLandingPage() {
 
     const practiceAreasCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, 'practice_areas') : null, [firestore]);
     const { data: practiceAreasData, isLoading: arePracticeAreasLoading } = useCollection(practiceAreasCollectionRef);
+    
+    const statsCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, "stats") : null, [firestore]);
+    const { data: statsData, isLoading: areStatsLoading } = useCollection(statsCollectionRef);
+    const [editingStats, setEditingStats] = useState<any>({});
+
+    useEffect(() => {
+        if(statsData) {
+            const initialStats: any = {};
+            statsData.forEach(stat => {
+                initialStats[stat.id] = { value: stat.value, label: stat.label };
+            });
+            setEditingStats(initialStats);
+        }
+    }, [statsData]);
 
     useEffect(() => {
         if (!isUserLoading && !user) {
@@ -123,6 +127,27 @@ export default function ConfigureLandingPage() {
             }
         }));
     }
+
+    const handleStatInputChange = (id: string, field: 'value' | 'label', value: string | number) => {
+        setEditingStats((prev: any) => ({
+            ...prev,
+            [id]: {
+                ...prev[id],
+                [field]: value
+            }
+        }));
+    };
+
+    const handleSaveStats = async () => {
+        if (!firestore) return;
+        const updatePromises = Object.keys(editingStats).map(id => {
+            const statRef = doc(firestore, 'stats', id);
+            return updateDocumentNonBlocking(statRef, editingStats[id]);
+        });
+
+        await Promise.all(updatePromises);
+        toast({ title: "Statistici Salvate", description: "Statisticile au fost actualizate." });
+    };
 
     const handleSaveSection = (sectionId: string) => {
         if (!firestore) return;
@@ -166,7 +191,7 @@ export default function ConfigureLandingPage() {
         if (suggestedCallToAction) handleInputChange('hero', 'callToActionText', suggestedCallToAction);
     };
 
-    const totalLoading = isLoading || isUserLoading || isLoadingRole || areTestimonialsLoading || arePricesLoading || arePracticeAreasLoading;
+    const totalLoading = isLoading || isUserLoading || isLoadingRole || areTestimonialsLoading || arePricesLoading || arePracticeAreasLoading || areStatsLoading;
 
     if (totalLoading) {
         return (
@@ -275,6 +300,45 @@ export default function ConfigureLandingPage() {
                     </AccordionContent>
                 </AccordionItem>
                 
+                 {/* Stats Section */}
+                <AccordionItem value="item-7">
+                    <AccordionTrigger className="text-xl font-headline bg-muted px-4 rounded-t-lg">Secțiune Statistici</AccordionTrigger>
+                    <AccordionContent className="p-0">
+                        <Card className="rounded-t-none">
+                            <CardHeader>
+                                <CardTitle>Gestionare Statistici</CardTitle>
+                                <CardDescription>Editați valorile și etichetele afișate în secțiunea de statistici.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {Object.keys(editingStats).map((statId) => (
+                                    <div key={statId} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end p-4 border rounded-lg">
+                                        <div className="space-y-1">
+                                            <Label htmlFor={`stat-label-${statId}`}>Etichetă</Label>
+                                            <Input 
+                                                id={`stat-label-${statId}`} 
+                                                value={editingStats[statId]?.label || ''}
+                                                onChange={(e) => handleStatInputChange(statId, 'label', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label htmlFor={`stat-value-${statId}`}>Valoare</Label>
+                                            <Input 
+                                                id={`stat-value-${statId}`}
+                                                type="number"
+                                                value={editingStats[statId]?.value || 0}
+                                                onChange={(e) => handleStatInputChange(statId, 'value', e.target.valueAsNumber)}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </CardContent>
+                            <CardFooter className="flex justify-end border-t pt-4">
+                                <Button onClick={handleSaveStats}>Salvează Statisticile</Button>
+                            </CardFooter>
+                        </Card>
+                    </AccordionContent>
+                </AccordionItem>
+
                 {/* Practice Areas Section */}
                 <AccordionItem value="item-6">
                     <AccordionTrigger className="text-xl font-headline bg-muted px-4 rounded-t-lg">Servicii (Arii de Practică)</AccordionTrigger>

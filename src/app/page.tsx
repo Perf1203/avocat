@@ -91,6 +91,11 @@ const iconMap: { [key: string]: LucideIcon } = {
   ...LucideIcons
 };
 
+const AreaIcon = ({ name = 'Gavel' }: { name?: string }) => {
+    const IconComponent = (LucideIcons as any)[name] || Gavel;
+    return <IconComponent className="h-5 w-5 text-primary" />;
+};
+
 const AnimatedSection = ({ children, className }: { children: React.ReactNode, className?: string }) => {
     const { ref, inView } = useInView({
         triggerOnce: false,
@@ -306,7 +311,7 @@ export default function Home() {
                       </div>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-y-10 md:gap-y-0 md:gap-x-8">
-                       {isLoading ? (
+                       {areStatsLoading ? (
                            [...Array(3)].map((_, index) => (
                              <div key={index} className="text-center flex flex-col items-center">
                                 <Skeleton className="h-8 w-8 rounded-full" />
@@ -317,7 +322,10 @@ export default function Home() {
                              </div>
                            ))
                        ) : sortedStats.map((stat: any) => {
-                          const suffix = stat.label.includes('%') ? '%' : (stat.label.includes('+') ? '+' : '');
+                          const hasPercentage = stat.label.includes('%');
+                          const hasPlus = stat.label.includes('+');
+                          const suffix = hasPercentage ? '%' : (hasPlus ? '+' : '');
+
                           return (
                               <div key={stat.id} className="text-center flex flex-col items-center">
                                 <StatIcon name={stat.icon} />
