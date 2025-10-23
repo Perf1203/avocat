@@ -114,21 +114,22 @@ export const generateBill = (conversation: any, websiteName: string) => {
     doc.setTextColor(textColor);
     doc.text(normalizeText(conversation.guestEmail), 80, partiesY + 14);
   }
-
+  
   // INVOICE DETAILS
-  const detailsX = doc.internal.pageSize.getWidth() - 70;
+  const detailsLabelX = doc.internal.pageSize.getWidth() - 70;
   const detailsValueX = doc.internal.pageSize.getWidth() - 20;
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(secondaryColor);
-  doc.text(normalizeText('NR. FACTURĂ:'), detailsX, partiesY);
-  doc.text(normalizeText('DATA FACTURII:'), detailsX, partiesY + 7);
+  doc.text(normalizeText('NR. FACTURA:'), detailsLabelX, partiesY, { align: 'left' });
+  doc.text(normalizeText('DATA FACTURII:'), detailsLabelX, partiesY + 7, { align: 'left' });
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(textColor);
   doc.text(invoiceNumber, detailsValueX, partiesY, { align: 'right' });
   doc.text(normalizeText(formatDate(invoiceDate)), detailsValueX, partiesY + 7, { align: 'right' });
+
 
 
   // --- Table of Services ---
