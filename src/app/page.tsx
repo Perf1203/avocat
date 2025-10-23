@@ -91,10 +91,16 @@ const iconMap: { [key: string]: LucideIcon } = {
   ...LucideIcons
 };
 
+const StatIcon = ({ name }: { name: string }) => {
+    const Icon = iconMap[name];
+    return Icon ? <Icon className="h-8 w-8 text-accent" /> : null;
+};
+
 const AreaIcon = ({ name = 'Gavel' }: { name?: string }) => {
     const IconComponent = (LucideIcons as any)[name] || Gavel;
     return <IconComponent className="h-5 w-5 text-primary" />;
 };
+
 
 const AnimatedSection = ({ children, className }: { children: React.ReactNode, className?: string }) => {
     const { ref, inView } = useInView({
@@ -136,11 +142,6 @@ function AnimatedNumber({ value, suffix, duration = 2000 }: { value: number, suf
 
   return <span ref={ref}>{count}{suffix}</span>;
 }
-
-const StatIcon = ({ name }: { name: string }) => {
-    const Icon = iconMap[name];
-    return Icon ? <Icon className="h-8 w-8 text-accent" /> : null;
-};
 
 
 export default function Home() {
@@ -204,7 +205,7 @@ export default function Home() {
     
     const updates = Object.keys(editingStats).map(id => {
       const statRef = doc(firestore, 'stats', id);
-      return setDoc(statRef, { value: editingStats[id] }, { merge: true });
+      return updateDocumentNonBlocking(statRef, { value: editingStats[id] });
     });
 
     try {
@@ -329,21 +330,23 @@ export default function Home() {
                           return (
                               <div key={stat.id} className="text-center flex flex-col items-center">
                                 <StatIcon name={stat.icon} />
+                                <div className="flex items-center mt-3">
                                 {isEditingStats ? (
-                                    <div className="flex items-center mt-3">
+                                    <>
                                       <Input
                                           type="number"
-                                          value={editingStats[stat.id] ?? stat.value}
+                                          defaultValue={stat.value}
                                           onChange={(e) => handleStatChange(stat.id, e.target.value)}
                                           className="text-5xl font-bold text-primary text-center p-0 h-auto bg-transparent border-primary w-32"
                                       />
                                       {suffix && <span className="text-5xl font-bold text-primary">{suffix}</span>}
-                                    </div>
+                                    </>
                                 ) : (
-                                  <p className="text-5xl font-bold text-primary mt-3">
+                                  <p className="text-5xl font-bold text-primary">
                                     <AnimatedNumber value={stat.value} suffix={suffix} />
                                   </p>
                                 )}
+                                </div>
                                 <p className="mt-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{stat.label.replace(' (%)', '').replace('+', '')}</p>
                               </div>
                           );
@@ -609,3 +612,5 @@ export default function Home() {
     </>
   );
 }
+
+    
