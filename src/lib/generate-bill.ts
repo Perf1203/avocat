@@ -8,21 +8,26 @@ import { Timestamp } from 'firebase/firestore';
 
 // Extend jsPDF with autoTable
 interface jsPDFWithAutoTable extends jsPDF {
-  autoTable: (options: any) => jsPDF;
+  autoTable: (options: any) => jsPDFWithAutoTable;
 }
 
 const formatDate = (date: any) => {
+    let dateObj: Date;
     if (date instanceof Date) {
-        return format(date, 'dd/MM/yy HH:mm');
+        dateObj = date;
+    } else if (date instanceof Timestamp) {
+        dateObj = date.toDate();
+    } else if (typeof date === 'string' || typeof date === 'number') {
+        dateObj = new Date(date);
+    } else {
+        return 'Data invalidă';
     }
-    if (date instanceof Timestamp) {
-        return format(date.toDate(), 'dd/MM/yy HH:mm');
+
+    if (isNaN(dateObj.getTime())) {
+        return 'Data invalidă';
     }
-    // Handle case where date might be a string from older data
-    if (typeof date === 'string') {
-        return format(new Date(date), 'dd/MM/yy HH:mm');
-    }
-    return 'Data invalidă';
+
+    return format(dateObj, 'dd/MM/yyyy HH:mm');
 };
 
 export const generateBill = (conversation: any, websiteName: string) => {
@@ -33,48 +38,57 @@ export const generateBill = (conversation: any, websiteName: string) => {
   
   const confirmedPayments = conversation.payments || [];
   let totalAmount = 0;
-
-  // Header
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${websiteName}`, 14, 22);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Servicii de Consultanță Juridică', 14, 28);
-
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('FACTURĂ', 200, 22, { align: 'right' });
-
-  // Client and Invoice Details
-  doc.setLineWidth(0.5);
-  doc.line(14, 35, 200, 35);
   
-  doc.setFontSize(10);
+  const primaryColor = '#222831'; // Corresponds to HSL 215 39.3% 20.2%
+  const accentColor = '#FFC107'; // A sample accent color for contrast
+  const lightGrayColor = '#f7f7f7';
+  const textColor = '#444444';
+
+  // --- Header Section ---
+  doc.setFillColor(primaryColor);
+  doc.rect(0, 0, doc.internal.pageSize.getWidth(), 40, 'F');
+  
   doc.setFont('helvetica', 'bold');
-  doc.text('Client:', 14, 45);
+  doc.setFontSize(22);
+  doc.setTextColor('#FFFFFF');
+  doc.text(websiteName, 20, 25);
+  
+  doc.setFontSize(18);
+  doc.setTextColor('#FFFFFF');
+  doc.text('FACTURĂ', doc.internal.pageSize.getWidth() - 20, 25, { align: 'right' });
+
+
+  // --- Client and Invoice Details Section ---
+  doc.setFontSize(11);
+  doc.setTextColor(textColor);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Facturat către:', 20, 60);
   doc.setFont('helvetica', 'normal');
-  doc.text(clientName, 30, 45);
+  doc.text(clientName, 20, 68);
   if (conversation.guestEmail) {
-    doc.text(conversation.guestEmail, 30, 50);
+    doc.text(conversation.guestEmail, 20, 74);
   }
 
+  const detailsX = doc.internal.pageSize.getWidth() - 20;
   doc.setFont('helvetica', 'bold');
-  doc.text('Număr Factură:', 140, 45);
+  doc.text('Număr Factură:', detailsX, 60, { align: 'right' });
   doc.setFont('helvetica', 'normal');
-  doc.text(invoiceNumber, 170, 45);
+  doc.text(invoiceNumber, detailsX, 68, { align: 'right' });
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Data Facturării:', 140, 50);
+  doc.text('Data Facturării:', detailsX, 76, { align: 'right' });
   doc.setFont('helvetica', 'normal');
-  doc.text(format(invoiceDate, 'dd MMMM yyyy', { locale: ro }), 170, 50);
+  doc.text(format(invoiceDate, 'dd MMMM yyyy', { locale: ro }), detailsX, 84, { align: 'right' });
 
-  // Table
-  const tableBody = confirmedPayments.map((payment: any) => {
+
+  // --- Table of Services ---
+  const tableBody = confirmedPayments.map((payment: any, index: number) => {
       totalAmount += payment.amount;
       const paymentDate = formatDate(payment.confirmedAt);
       return [
-        `Consultanță (${paymentDate})`,
+        index + 1,
+        `Consultanță Online - ${paymentDate}`,
         '1',
         `${payment.amount.toFixed(2)} €`,
         `${payment.amount.toFixed(2)} €`,
@@ -82,28 +96,54 @@ export const generateBill = (conversation: any, websiteName: string) => {
   });
 
   doc.autoTable({
-    startY: 65,
-    head: [['Descriere Serviciu', 'Cantitate', 'Preț Unitar', 'Total']],
+    startY: 100,
+    head: [['#', 'Descriere Serviciu', 'Cant.', 'Preț Unitar', 'Total']],
     body: tableBody,
-    theme: 'striped',
-    headStyles: { fillColor: [34, 40, 49] }, // --primary color
-    styles: { fontSize: 10 },
+    theme: 'grid',
+    headStyles: { 
+        fillColor: primaryColor,
+        textColor: '#FFFFFF',
+        fontSize: 10,
+        fontStyle: 'bold'
+    },
+    styles: { 
+        fontSize: 10,
+        cellPadding: 3,
+        lineColor: '#dee2e6'
+    },
+    alternateRowStyles: {
+        fillColor: lightGrayColor
+    }
   });
 
-  // Totals
+
+  // --- Totals Section ---
   const finalY = doc.autoTable.previous.finalY;
+  const totalSectionY = finalY + 15;
+  
   doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Subtotal:', 150, totalSectionY, { align: 'right' });
+  doc.text(`${totalAmount.toFixed(2)} €`, 200, totalSectionY, { align: 'right' });
+  
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('Total de Plată:', 140, finalY + 15);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${totalAmount.toFixed(2)} €`, 200, finalY + 15, { align: 'right' });
+  doc.text('Total de Plată:', 150, totalSectionY + 8, { align: 'right' });
+  doc.text(`${totalAmount.toFixed(2)} €`, 200, totalSectionY + 8, { align: 'right' });
 
-  // Footer
-  doc.setFontSize(8);
-  doc.setTextColor(150);
-  doc.text('Vă mulțumim pentru încrederea acordată!', 14, 280);
-  doc.text(`Factură generată de ${websiteName}`, 200, 280, { align: 'right' });
 
-  // Save the PDF
+  // --- Footer Section ---
+  const pageHeight = doc.internal.pageSize.getHeight();
+  doc.setLineWidth(0.2);
+  doc.setDrawColor(primaryColor);
+  doc.line(20, pageHeight - 30, doc.internal.pageSize.getWidth() - 20, pageHeight - 30);
+  
+  doc.setFontSize(9);
+  doc.setTextColor('#888888');
+  doc.text('Vă mulțumim pentru încrederea acordată!', 20, pageHeight - 22);
+  doc.text(`Factură generată de ${websiteName}`, doc.internal.pageSize.getWidth() - 20, pageHeight - 22, { align: 'right' });
+
+
+  // --- Save the PDF ---
   doc.save(`factura-${clientName.replace(/\s/g, '_')}-${invoiceNumber}.pdf`);
 };
