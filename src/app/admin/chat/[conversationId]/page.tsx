@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirebase, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, serverTimestamp, setDoc, where } from 'firebase/firestore';
-import { Send, ArrowLeft, CircleUserRound, UserPlus, CreditCard, CheckCircle } from 'lucide-react';
+import { Send, ArrowLeft, CircleUserRound, UserPlus, CreditCard, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -25,6 +25,54 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+
+// CountdownTimer Component
+const CountdownTimer = ({ targetDate, onExpire }: { targetDate: Date | null, onExpire: () => void }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    if (!targetDate) return;
+
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const difference = targetDate.getTime() - now.getTime();
+
+      if (difference <= 0) {
+        setTimeLeft('Timp expirat');
+        onExpire();
+        clearInterval(interval);
+        return;
+      }
+
+      const hours = Math.floor(difference / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+      
+      let timerString = '';
+      if (hours > 0) timerString += `${hours}h `;
+      if (minutes > 0) timerString += `${minutes}m `;
+      if (hours === 0) timerString += `${seconds}s`;
+
+      setTimeLeft(timerString.trim());
+    };
+
+    const interval = setInterval(calculateTimeLeft, 1000);
+    calculateTimeLeft();
+
+    return () => clearInterval(interval);
+  }, [targetDate, onExpire]);
+
+  if (!targetDate) return null;
+
+  return (
+    <span className={cn("text-xs font-mono flex items-center gap-1", timeLeft === 'Timp expirat' ? "text-destructive" : "text-amber-600")}>
+        <Clock className="h-3 w-3" />
+        {timeLeft}
+    </span>
+  );
+};
+
 
 export default function ChatConversationPage() {
   const { firestore } = useFirebase();
@@ -37,6 +85,7 @@ export default function ChatConversationPage() {
   const [message, setMessage] = useState('');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentLink, setPaymentLink] = useState('');
+  const [timerExpired, setTimerExpired] = useState(false);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -68,7 +117,7 @@ export default function ChatConversationPage() {
             }
         }, 100);
     }
-  }, [messages]);
+  }, [messages, timerExpired]);
 
   useEffect(() => {
     // Mark conversation as read by admin
@@ -178,6 +227,10 @@ export default function ChatConversationPage() {
   const guestDisplayInfo = conversation?.guestEmail || (conversation?.guestId ? `${conversation.guestId.substring(0, 12)}...` : '');
   const isGuestAnonymous = !conversation?.guestName;
 
+  const activeTimerDate = conversation?.followUpAt?.toDate() || conversation?.reminderAt?.toDate() || null;
+  const isFollowUpTimer = !!conversation?.followUpAt;
+
+
   return (
     <div className="container py-12">
       <Card className="mx-auto max-w-3xl h-[calc(100vh-12rem)] flex flex-col">
@@ -192,7 +245,10 @@ export default function ChatConversationPage() {
                 <AvatarFallback><CircleUserRound /></AvatarFallback>
              </Avatar>
              <div className="overflow-hidden">
-                <CardTitle className="truncate">Conversație cu {guestDisplayName}</CardTitle>
+                <div className="flex items-center gap-2">
+                    <CardTitle className="truncate">Conversație cu {guestDisplayName}</CardTitle>
+                    <CountdownTimer targetDate={activeTimerDate} onExpire={() => setTimerExpired(true)} />
+                </div>
                 {guestDisplayInfo && <p className="text-xs text-muted-foreground truncate">{guestDisplayInfo}</p>}
              </div>
           </div>
@@ -218,6 +274,20 @@ export default function ChatConversationPage() {
         </CardHeader>
         <CardContent className="flex-1 p-0">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
+            {timerExpired && (
+                 <div className="p-4">
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Timpul a Expirat!</AlertTitle>
+                        <AlertDescription>
+                            {isFollowUpTimer 
+                                ? 'Au trecut 2.5 ore de la plată. Este timpul pentru un follow-up sau pentru a oferi asistență suplimentară.'
+                                : 'Au trecut 10 minute. Vă rugăm să solicitați identificarea și/sau plata pentru a continua.'
+                            }
+                        </AlertDescription>
+                    </Alert>
+                </div>
+            )}
             <div className="p-6 space-y-4">
               {isLoadingMessages ? (
                  <div className="space-y-4">

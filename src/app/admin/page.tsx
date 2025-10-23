@@ -61,52 +61,6 @@ const daysOfWeek = [
     { name: 'S', value: 6, label: 'Sâmbătă' },
 ];
 
-const CountdownTimer = ({ targetDate }: { targetDate: Date }) => {
-  const [timeLeft, setTimeLeft] = useState('');
-  const [isExpired, setIsExpired] = useState(false);
-
-  useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date();
-      const difference = targetDate.getTime() - now.getTime();
-
-      if (difference <= 0) {
-        setIsExpired(true);
-        setTimeLeft('Timp expirat');
-        clearInterval(interval);
-        return;
-      }
-
-      const hours = Math.floor(difference / (1000 * 60 * 60));
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-      
-      let timerString = '';
-      if (hours > 0) timerString += `${hours}h `;
-      if (minutes > 0) timerString += `${minutes}m `;
-      if (hours === 0) timerString += `${seconds}s`;
-
-
-      setTimeLeft(timerString.trim());
-    };
-
-    const interval = setInterval(calculateTimeLeft, 1000);
-    calculateTimeLeft();
-
-    return () => clearInterval(interval);
-  }, [targetDate]);
-
-  return (
-    <span className={cn("text-xs font-mono", isExpired ? "text-destructive" : "text-amber-600")}>
-      <div className="flex items-center gap-1">
-        {isExpired ? <AlertCircle className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
-        {timeLeft}
-      </div>
-    </span>
-  );
-};
-
-
 export default function AdminPage() {
   const { firestore } = useFirebase();
   const { user, isUserLoading } = useUser();
@@ -386,12 +340,12 @@ export default function AdminPage() {
                         </TableCell>
                         <TableCell className="block sm:table-cell text-muted-foreground truncate max-w-xs before:content-['Mesaj:'] before:font-bold before:mr-2 sm:before:content-none">{convo.lastMessageText}</TableCell>
                         <TableCell className="block sm:table-cell before:content-['Status:'] before:font-bold before:mr-2 sm:before:content-none">
-                          {convo.followUpAt ? (
-                              <CountdownTimer targetDate={convo.followUpAt.toDate()} />
-                          ) : convo.reminderAt ? (
-                              <CountdownTimer targetDate={convo.reminderAt.toDate()} />
+                          {convo.isReadByAdmin === false ? (
+                            <Badge variant="default">Mesaj Nou</Badge>
                           ) : (
-                              <span className="text-xs text-muted-foreground">{convo.lastMessageAt && format(convo.lastMessageAt.toDate(), 'p')}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {convo.lastMessageAt && format(convo.lastMessageAt.toDate(), 'p')}
+                            </span>
                           )}
                         </TableCell>
                         <TableCell className="block sm:table-cell text-right space-x-1">
@@ -795,5 +749,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
