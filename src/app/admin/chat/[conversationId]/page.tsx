@@ -234,7 +234,7 @@ export default function ChatConversationPage() {
     const confirmedPayment = {
         amount: conversation.paymentAmount,
         link: conversation.paymentLink,
-        confirmedAt: serverTimestamp(),
+        confirmedAt: new Date(),
     };
 
     // Atomically update conversation

@@ -4,11 +4,26 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
+import { Timestamp } from 'firebase/firestore';
 
 // Extend jsPDF with autoTable
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
 }
+
+const formatDate = (date: any) => {
+    if (date instanceof Date) {
+        return format(date, 'dd/MM/yy HH:mm');
+    }
+    if (date instanceof Timestamp) {
+        return format(date.toDate(), 'dd/MM/yy HH:mm');
+    }
+    // Handle case where date might be a string from older data
+    if (typeof date === 'string') {
+        return format(new Date(date), 'dd/MM/yy HH:mm');
+    }
+    return 'Data invalidă';
+};
 
 export const generateBill = (conversation: any, websiteName: string) => {
   const doc = new jsPDF() as jsPDFWithAutoTable;
@@ -57,8 +72,9 @@ export const generateBill = (conversation: any, websiteName: string) => {
   // Table
   const tableBody = confirmedPayments.map((payment: any) => {
       totalAmount += payment.amount;
+      const paymentDate = formatDate(payment.confirmedAt);
       return [
-        `Consultanță (${format(payment.confirmedAt.toDate(), 'dd/MM/yy HH:mm')})`,
+        `Consultanță (${paymentDate})`,
         '1',
         `${payment.amount.toFixed(2)} €`,
         `${payment.amount.toFixed(2)} €`,
