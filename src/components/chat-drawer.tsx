@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, LogOut, User as UserIcon, Mail, Info, CreditCard, CheckCircle, FileDown } from 'lucide-react';
+import { Send, LogOut, User as UserIcon, Mail, Info, CreditCard, CheckCircle, FileDown, Calendar, FileSignature } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -18,6 +18,7 @@ import { toDataURL } from 'qrcode';
 import Image from 'next/image';
 import Link from 'next/link';
 import { generateBill } from '@/lib/generate-bill';
+import { generateContract } from '@/lib/generate-contract';
 
 
 interface ChatDrawerProps {
@@ -213,6 +214,28 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     }
     generateBill(conversation, websiteName);
   };
+  
+    const handleSignContract = () => {
+      if (!conversationRef || !conversation.contract) return;
+
+      const signatureData = {
+          'contract.guestSignature': conversation.guestName || 'Vizitator',
+          'contract.guestSignedAt': new Date(),
+      };
+      
+      if (conversation.contract.adminSignature) {
+        signatureData['contract.status'] = 'signed';
+      }
+
+      updateDocumentNonBlocking(conversationRef, signatureData);
+
+      toast({ title: 'Contract Semnat', description: 'Ați semnat contractul.' });
+  };
+  
+  const handleDownloadContract = () => {
+    if (!conversation || !conversation.contract) return;
+    generateContract(conversation, websiteName, "Administrator");
+  };
 
 
   const renderIdentificationForm = () => (
@@ -245,6 +268,10 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   
   const isChatting = messages && messages.length > 0;
   const isMandatoryIdentification = conversation?.identificationRequested && !conversation?.guestName;
+
+  const contract = conversation?.contract;
+  const canGuestSign = contract && !contract.guestSignature;
+  const isContractSigned = contract && contract.status === 'signed';
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => {
@@ -280,6 +307,37 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             <div className="p-4 space-y-4">
             {messages && messages.map((msg: any) => {
                  if (msg.isSystemMessage) {
+                    if (msg.systemMessageType === 'schedule_request') {
+                        return (
+                            <div key={msg.id} className="p-4 my-2 rounded-lg border bg-secondary/50 text-center">
+                                <h4 className="font-semibold flex items-center justify-center gap-2 mb-3"><Calendar /> Solicitare de Programare</h4>
+                                <p className="text-sm text-muted-foreground mb-3">Administratorul v-a invitat să programați o consultație.</p>
+                                <Button asChild size="sm">
+                                    <Link href="/schedule">Mergi la Programări</Link>
+                                </Button>
+                            </div>
+                        );
+                    }
+                    if (msg.systemMessageType === 'contract_sent' && contract) {
+                        return (
+                            <div key={msg.id} className="p-4 my-2 rounded-lg border bg-blue-100 dark:bg-blue-900/50 text-center">
+                                <h4 className="font-semibold flex items-center justify-center gap-2 mb-3"><FileSignature /> Contract pentru Semnare</h4>
+                                {isContractSigned ? (
+                                    <div className='text-center'>
+                                        <p className="text-sm text-green-600 font-medium mb-3">✓ Semnat de ambele părți</p>
+                                        <Button size="sm" variant="secondary" onClick={handleDownloadContract}><FileDown className="mr-2"/>Descarcă PDF</Button>
+                                    </div>
+                                ) : canGuestSign ? (
+                                    <div className='text-center'>
+                                        <p className="text-sm text-amber-600 mb-3">{contract.adminSignature ? 'Așteaptă semnătura dvs.' : 'Așteaptă semnăturile'}</p>
+                                        <Button size="sm" onClick={handleSignContract}>Semnează Contractul</Button>
+                                    </div>
+                                ) : (
+                                     <p className="text-sm text-muted-foreground">Așteaptă semnătura administratorului.</p>
+                                )}
+                            </div>
+                        );
+                    }
                     if (msg.systemMessageType === 'payment_request' && msg.paymentLink) {
                         if (conversation?.paymentStatus === 'paid') {
                             return (

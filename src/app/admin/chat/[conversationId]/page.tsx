@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirebase, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, serverTimestamp, updateDoc, arrayUnion } from 'firebase/firestore';
-import { Send, ArrowLeft, CircleUserRound, UserPlus, CreditCard, CheckCircle, Clock, AlertCircle, FileDown, MoreVertical } from 'lucide-react';
+import { Send, ArrowLeft, CircleUserRound, UserPlus, CreditCard, CheckCircle, Clock, AlertCircle, FileDown, MoreVertical, Calendar, FileSignature } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -33,6 +33,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { generateBill } from '@/lib/generate-bill';
+import { generateContract } from '@/lib/generate-contract';
 
 // CountdownTimer Component
 const CountdownTimer = ({ targetDate, onExpire }: { targetDate: Date | null, onExpire: () => void }) => {
@@ -270,6 +271,76 @@ export default function ChatConversationPage() {
     }
     generateBill(conversation, websiteName);
   };
+  
+    const handleRequestSchedule = () => {
+    if (!firestore || !user?.uid || !conversationRef) return;
+
+    addDocumentNonBlocking(collection(firestore, 'conversations', conversationId, 'messages'), {
+      text: "Am dori să programăm o întâlnire cu dvs. Vă rugăm să folosiți butonul de mai jos.",
+      senderId: user.uid,
+      timestamp: serverTimestamp(),
+      isSystemMessage: true,
+      systemMessageType: 'schedule_request',
+    });
+
+    updateDocumentNonBlocking(conversationRef, {
+        lastMessageAt: serverTimestamp(),
+        lastMessageText: "Solicitare de programare trimisă.",
+    });
+
+    toast({
+        title: 'Solicitare Trimisă',
+        description: 'Solicitarea de programare a fost trimisă vizitatorului.'
+    });
+  };
+
+  const handleSendContract = () => {
+      if (!conversationRef) return;
+      
+      const contractData = {
+          sentAt: serverTimestamp(),
+          status: 'pending',
+          guestSignature: null,
+          adminSignature: null,
+      };
+
+      updateDocumentNonBlocking(conversationRef, { contract: contractData });
+      
+      addDocumentNonBlocking(collection(firestore, 'conversations', conversationId, 'messages'), {
+          text: "V-a fost trimis un contract pentru semnare.",
+          senderId: user?.uid,
+          timestamp: serverTimestamp(),
+          isSystemMessage: true,
+          systemMessageType: 'contract_sent',
+      });
+
+      toast({
+          title: 'Contract Trimis',
+          description: 'Contractul a fost trimis vizitatorului pentru semnare.'
+      });
+  };
+
+  const handleSignContract = () => {
+      if (!conversationRef || !user || !conversation.contract) return;
+
+      const signatureData = {
+          'contract.adminSignature': user.displayName || 'Administrator',
+          'contract.adminSignedAt': new Date(),
+      };
+      
+      if (conversation.contract.guestSignature) {
+        signatureData['contract.status'] = 'signed';
+      }
+
+      updateDocumentNonBlocking(conversationRef, signatureData);
+
+      toast({ title: 'Contract Semnat', description: 'Ați semnat contractul.' });
+  };
+  
+   const handleDownloadContract = () => {
+    if (!conversation || !conversation.contract) return;
+    generateContract(conversation, websiteName, user?.displayName || "Administrator");
+  };
 
   if (isUserLoading || isLoadingConversation) {
     return <div className="container py-12"><Skeleton className="h-[70vh] w-full" /></div>;
@@ -282,6 +353,10 @@ export default function ChatConversationPage() {
   const isFollowUpTimer = !!conversation?.followUpAt && !!conversation?.payments?.length;
 
   const hasConfirmedPayments = conversation?.payments && conversation.payments.length > 0;
+  
+  const contract = conversation?.contract;
+  const canAdminSign = contract && !contract.adminSignature;
+  const isContractSigned = contract && contract.status === 'signed';
 
   return (
     <div className="container py-12">
@@ -329,6 +404,14 @@ export default function ChatConversationPage() {
                         <CreditCard className="mr-2 h-4 w-4" />
                         <span>Solicită Plată</span>
                     </DropdownMenuItem>
+                     <DropdownMenuItem onClick={handleRequestSchedule}>
+                        <Calendar className="mr-2 h-4 w-4" />
+                        <span>Solicită Programare</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSendContract}>
+                        <FileSignature className="mr-2 h-4 w-4" />
+                        <span>Trimite Contract</span>
+                    </DropdownMenuItem>
                     {hasConfirmedPayments && (
                         <DropdownMenuItem onClick={handleDownloadBill}>
                             <FileDown className="mr-2 h-4 w-4" />
@@ -364,6 +447,47 @@ export default function ChatConversationPage() {
                 <>
                 {messages && messages.map((msg: any) => {
                     if (msg.isSystemMessage) {
+                        if (msg.systemMessageType === 'schedule_request') {
+                          return (
+                            <div key={msg.id} className="p-4 my-2 rounded-lg border bg-secondary/50 text-center">
+                                <h4 className="font-semibold flex items-center justify-center gap-2 mb-3"><Calendar /> Solicitare de Programare</h4>
+                                <p className="text-sm text-muted-foreground mb-3">Administratorul v-a invitat să programați o consultație.</p>
+                                <Button asChild size="sm">
+                                    <Link href="/schedule">Mergi la Programări</Link>
+                                </Button>
+                            </div>
+                          );
+                        }
+                         if (msg.systemMessageType === 'contract_sent' && contract) {
+                          return (
+                            <div key={msg.id} className="p-4 my-2 rounded-lg border bg-blue-100 dark:bg-blue-900/50 text-center">
+                                <h4 className="font-semibold flex items-center justify-center gap-2 mb-3"><FileSignature /> Contract pentru Semnare</h4>
+                                {isContractSigned ? (
+                                    <div className='text-center'>
+                                        <p className="text-sm text-green-600 font-medium mb-3">✓ Semnat de ambele părți</p>
+                                        <Button size="sm" variant="secondary" onClick={handleDownloadContract}><FileDown className="mr-2"/>Descarcă PDF</Button>
+                                    </div>
+                                ) : canAdminSign ? (
+                                    <div className='text-center'>
+                                        <p className="text-sm text-amber-600 mb-3">{contract.guestSignature ? `Așteaptă semnătura dvs.` : 'Așteaptă semnăturile'}</p>
+                                        <Button size="sm" onClick={handleSignContract}>Semnează Contractul</Button>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">Așteaptă semnătura clientului.</p>
+                                )}
+                            </div>
+                          );
+                        }
+                        if (msg.systemMessageType === 'payment_request' && msg.paymentLink) {
+                            return (
+                                <div key={msg.id} className="p-4 my-2 rounded-lg border bg-secondary/50 text-center">
+                                    <h4 className="font-semibold flex items-center justify-center gap-2 mb-3"><CreditCard /> Solicitare de Plată</h4>
+                                    <Button asChild size="sm">
+                                        <Link href={msg.paymentLink} target="_blank">Mergi la Plată</Link>
+                                    </Button>
+                                </div>
+                            )
+                        }
                         return (
                             <div key={msg.id} className="text-center text-xs text-muted-foreground my-4">
                                 --- {msg.text} ---

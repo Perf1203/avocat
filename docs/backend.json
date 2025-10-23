@@ -369,6 +369,18 @@
             "type": "string",
             "format": "date-time",
             "description": "Timestamp for the 2.5-hour follow-up reminder after payment."
+        },
+        "contract": {
+            "type": "object",
+            "description": "Represents a simple contract within the conversation.",
+            "properties": {
+                "sentAt": { "type": "string", "format": "date-time" },
+                "status": { "type": "string", "enum": ["pending", "signed"] },
+                "guestSignature": { "type": "string", "description": "Name of the guest who signed." },
+                "guestSignedAt": { "type": "string", "format": "date-time" },
+                "adminSignature": { "type": "string", "description": "Name of the admin who signed." },
+                "adminSignedAt": { "type": "string", "format": "date-time" }
+            }
         }
       },
       "required": ["guestId", "adminId", "createdAt", "lastMessageAt"]
@@ -406,7 +418,7 @@
         },
         "systemMessageType": {
             "type": "string",
-            "enum": ["payment_request", "payment_confirmed"],
+            "enum": ["payment_request", "payment_confirmed", "schedule_request", "contract_sent"],
             "description": "The type of system message."
         },
         "paymentLink": {
