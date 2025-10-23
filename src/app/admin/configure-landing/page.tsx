@@ -90,14 +90,32 @@ export default function ConfigureLandingPage() {
     const [editingStats, setEditingStats] = useState<any>({});
 
     useEffect(() => {
-        if(statsData && statsData.length > 0) {
-            const initialStats: any = {};
-            statsData.forEach(stat => {
-                initialStats[stat.id] = { value: stat.value, label: stat.label };
-            });
-            setEditingStats(initialStats);
-        }
-    }, [statsData]);
+      if (!firestore || areStatsLoading) return;
+  
+      const setupDefaultStats = async () => {
+          const defaultStats = {
+              success_rate: { label: 'Rata de Succes (%)', value: 98, icon: 'TrendingUp', order: 1 },
+              clients: { label: 'Clienți Mulțumiți', value: 1200, icon: 'Users', order: 2 },
+              experience: { label: 'Ani de Experiență', value: 20, icon: 'Award', order: 3 }
+          };
+          const statIds = Object.keys(defaultStats);
+          for (const statId of statIds) {
+              const statRef = doc(firestore, 'stats', statId);
+              // @ts-ignore
+              await setDocumentNonBlocking(statRef, defaultStats[statId], { merge: true });
+          }
+      };
+  
+      if (!areStatsLoading && (!statsData || statsData.length === 0)) {
+          setupDefaultStats();
+      } else if (statsData) {
+          const initialStats: any = {};
+          statsData.forEach((stat: any) => {
+              initialStats[stat.id] = { value: stat.value, label: stat.label };
+          });
+          setEditingStats(initialStats);
+      }
+    }, [statsData, areStatsLoading, firestore]);
 
     useEffect(() => {
         if (!isUserLoading && !user) {
@@ -140,13 +158,18 @@ export default function ConfigureLandingPage() {
 
     const handleSaveStats = async () => {
         if (!firestore) return;
-        const updatePromises = Object.keys(editingStats).map(id => {
-            const statRef = doc(firestore, 'stats', id);
-            return updateDocumentNonBlocking(statRef, editingStats[id]);
-        });
-
-        await Promise.all(updatePromises);
-        toast({ title: "Statistici Salvate", description: "Statisticile au fost actualizate." });
+        toast({ title: "Se salvează...", description: "Statisticile se actualizează." });
+        try {
+            const updatePromises = Object.keys(editingStats).map(id => {
+                const statRef = doc(firestore, 'stats', id);
+                return updateDocumentNonBlocking(statRef, editingStats[id]);
+            });
+            await Promise.all(updatePromises);
+            toast({ title: "Statistici Salvate", description: "Statisticile au fost actualizate." });
+        } catch (error) {
+            console.error("Error saving stats:", error);
+            toast({ title: "Eroare", description: "Nu s-au putut salva statisticile.", variant: "destructive" });
+        }
     };
 
     const handleSaveSection = (sectionId: string) => {
@@ -193,7 +216,7 @@ export default function ConfigureLandingPage() {
 
     const totalLoading = isLoading || isUserLoading || isLoadingRole || areTestimonialsLoading || arePricesLoading || arePracticeAreasLoading || areStatsLoading;
 
-    if (totalLoading) {
+    if (totalLoading && Object.keys(editingStats).length === 0) {
         return (
             <div className="container py-12">
                 <Skeleton className="h-10 w-48 mb-8" />
@@ -310,27 +333,31 @@ export default function ConfigureLandingPage() {
                                 <CardDescription>Editați valorile și etichetele afișate în secțiunea de statistici.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {Object.keys(editingStats).map((statId) => (
-                                    <div key={statId} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end p-4 border rounded-lg">
-                                        <div className="space-y-1">
-                                            <Label htmlFor={`stat-label-${statId}`}>Etichetă</Label>
-                                            <Input 
-                                                id={`stat-label-${statId}`} 
-                                                value={editingStats[statId]?.label || ''}
-                                                onChange={(e) => handleStatInputChange(statId, 'label', e.target.value)}
-                                            />
+                                {Object.keys(editingStats).length > 0 ? (
+                                    Object.keys(editingStats).map((statId) => (
+                                        <div key={statId} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end p-4 border rounded-lg">
+                                            <div className="space-y-1">
+                                                <Label htmlFor={`stat-label-${statId}`}>Etichetă</Label>
+                                                <Input 
+                                                    id={`stat-label-${statId}`} 
+                                                    value={editingStats[statId]?.label || ''}
+                                                    onChange={(e) => handleStatInputChange(statId, 'label', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label htmlFor={`stat-value-${statId}`}>Valoare</Label>
+                                                <Input 
+                                                    id={`stat-value-${statId}`}
+                                                    type="number"
+                                                    value={editingStats[statId]?.value || 0}
+                                                    onChange={(e) => handleStatInputChange(statId, 'value', e.target.valueAsNumber)}
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor={`stat-value-${statId}`}>Valoare</Label>
-                                            <Input 
-                                                id={`stat-value-${statId}`}
-                                                type="number"
-                                                value={editingStats[statId]?.value || 0}
-                                                onChange={(e) => handleStatInputChange(statId, 'value', e.target.valueAsNumber)}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))
+                                ) : (
+                                    <p className="text-muted-foreground">Se încarcă statisticile...</p>
+                                )}
                             </CardContent>
                             <CardFooter className="flex justify-end border-t pt-4">
                                 <Button onClick={handleSaveStats}>Salvează Statisticile</Button>
@@ -575,3 +602,5 @@ export default function ConfigureLandingPage() {
         </div>
     );
 }
+
+    
