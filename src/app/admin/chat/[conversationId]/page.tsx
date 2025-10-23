@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirebase, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, addDoc, serverTimestamp, setDoc, where } from 'firebase/firestore';
-import { Send, ArrowLeft, CircleUserRound, UserPlus, CreditCard, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Send, ArrowLeft, CircleUserRound, UserPlus, CreditCard, CheckCircle, Clock, AlertCircle, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { generateBill } from '@/lib/generate-bill';
 
 // CountdownTimer Component
 const CountdownTimer = ({ targetDate, onExpire }: { targetDate: Date | null, onExpire: () => void }) => {
@@ -88,9 +89,17 @@ export default function ChatConversationPage() {
   const [message, setMessage] = useState('');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentLink, setPaymentLink] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState<number | string>('');
   const [timerExpired, setTimerExpired] = useState(false);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const settingsRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'admin_settings', 'schedule');
+  }, [firestore]);
+  const { data: settings } = useDoc(settingsRef);
+  const websiteName = settings?.websiteName || "Avocat Law";
   
   const conversationRef = useMemoFirebase(() => {
     if (!firestore || !conversationId) return null;
@@ -174,10 +183,17 @@ export default function ChatConversationPage() {
   };
 
   const handleRequestPayment = () => {
-    if (!conversationRef || !paymentLink.trim()) return;
+    if (!conversationRef || !paymentLink.trim() || !paymentAmount) return;
+
+    const amount = typeof paymentAmount === 'string' ? parseFloat(paymentAmount) : paymentAmount;
+    if (isNaN(amount) || amount <= 0) {
+        toast({ variant: 'destructive', title: 'Sumă Invalidă', description: 'Vă rugăm introduceți o sumă validă.'});
+        return;
+    }
 
     const paymentData = {
         paymentLink: paymentLink,
+        paymentAmount: amount,
         paymentStatus: 'pending',
         paymentRequestedAt: serverTimestamp()
     };
@@ -185,12 +201,13 @@ export default function ChatConversationPage() {
 
     const messagesCol = collection(firestore, 'conversations', conversationId, 'messages');
     addDocumentNonBlocking(messagesCol, {
-        text: `Solicitare de plată trimisă: ${paymentLink}`,
+        text: `Solicitare de plată (${amount}€) trimisă: ${paymentLink}`,
         senderId: user?.uid,
         timestamp: serverTimestamp(),
         isSystemMessage: true,
         systemMessageType: 'payment_request',
-        paymentLink: paymentLink
+        paymentLink: paymentLink,
+        paymentAmount: amount
     });
 
     toast({
@@ -199,6 +216,7 @@ export default function ChatConversationPage() {
     });
     setShowPaymentDialog(false);
     setPaymentLink('');
+    setPaymentAmount('');
   };
 
   const handleConfirmPayment = () => {
@@ -209,6 +227,7 @@ export default function ChatConversationPage() {
 
     updateDocumentNonBlocking(conversationRef, { 
       paymentStatus: 'paid',
+      paymentConfirmationDate: serverTimestamp(),
       followUpAt: followUpDate,
       reminderAt: null // Clear the initial reminder
     });
@@ -226,6 +245,14 @@ export default function ChatConversationPage() {
         title: 'Plată Confirmată',
         description: 'Ați marcat plata ca fiind finalizată.'
     });
+  };
+
+  const handleDownloadBill = () => {
+    if (!conversation) {
+        toast({ variant: 'destructive', title: 'Eroare', description: 'Datele conversației nu sunt disponibile.' });
+        return;
+    }
+    generateBill(conversation, websiteName);
   };
 
   if (isUserLoading || isLoadingConversation) {
@@ -272,6 +299,11 @@ export default function ChatConversationPage() {
                 <Button size="sm" onClick={handleConfirmPayment} className="text-xs px-2 sm:px-3">
                     <CheckCircle className="mr-1 h-4 w-4"/>
                     Confirmă
+                </Button>
+             ) : conversation?.paymentStatus === 'paid' ? (
+                <Button size="sm" variant="secondary" onClick={handleDownloadBill} className="text-xs px-2 sm:px-3">
+                    <FileDown className="mr-1 h-4 w-4"/>
+                    Factură
                 </Button>
              ) : (
                 <Button size="sm" onClick={() => setShowPaymentDialog(true)} className="text-xs px-2 sm:px-3">
@@ -363,21 +395,33 @@ export default function ChatConversationPage() {
             <DialogHeader>
                 <DialogTitle>Solicită o Plată</DialogTitle>
                 <DialogDescription>
-                    Introduceți linkul de plată pe care doriți să îl trimiteți clientului. Acesta va vedea un link și un cod QR.
+                    Introduceți detaliile de plată pe care doriți să le trimiteți clientului.
                 </DialogDescription>
             </DialogHeader>
-            <div className="space-y-2">
-                <Label htmlFor="payment-link">Link de Plată</Label>
-                <Input 
-                    id="payment-link"
-                    value={paymentLink}
-                    onChange={(e) => setPaymentLink(e.target.value)}
-                    placeholder="https://stripe.com/pay/..."
-                />
+            <div className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="payment-amount">Suma de Plată (€)</Label>
+                    <Input 
+                        id="payment-amount"
+                        type="number"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        placeholder="ex: 50"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="payment-link">Link de Plată</Label>
+                    <Input 
+                        id="payment-link"
+                        value={paymentLink}
+                        onChange={(e) => setPaymentLink(e.target.value)}
+                        placeholder="https://stripe.com/pay/..."
+                    />
+                </div>
             </div>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>Anulează</Button>
-                <Button onClick={handleRequestPayment} disabled={!paymentLink.trim()}>Trimite Solicitarea</Button>
+                <Button onClick={handleRequestPayment} disabled={!paymentLink.trim() || !paymentAmount}>Trimite Solicitarea</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>

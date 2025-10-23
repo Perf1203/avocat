@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, LogOut, User as UserIcon, Mail, Info, CreditCard, CheckCircle } from 'lucide-react';
+import { Send, LogOut, User as UserIcon, Mail, Info, CreditCard, CheckCircle, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -17,6 +17,8 @@ import { Label } from './ui/label';
 import { toDataURL } from 'qrcode';
 import Image from 'next/image';
 import Link from 'next/link';
+import { generateBill } from '@/lib/generate-bill';
+
 
 interface ChatDrawerProps {
   isOpen: boolean;
@@ -38,6 +40,13 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   const [guestEmail, setGuestEmail] = useState('');
   
   const [qrCode, setQrCode] = useState<string | null>(null);
+
+    const settingsRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'admin_settings', 'schedule');
+  }, [firestore]);
+  const { data: settings } = useDoc(settingsRef);
+  const websiteName = settings?.websiteName || "Avocat Law";
 
   useEffect(() => {
     const storedConversationId = localStorage.getItem('conversationId');
@@ -80,11 +89,12 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
 
   useEffect(() => {
     if (scrollAreaRef.current) {
-      setTimeout(() => {
-        if(scrollAreaRef.current) {
-          scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+        const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) {
+             setTimeout(() => {
+                viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+            }, 100);
         }
-      }, 100);
     }
   }, [messages, showIdentification]);
   
@@ -129,8 +139,7 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             guestName: '',
             guestEmail: '',
             identificationRequested: false,
-            // Reminder is now set by the admin on first reply
-            // reminderAt: null, 
+            // Reminder is set by the admin on first reply
         };
         await setDoc(newConversationRef, newConvoData);
         const newConversationId = newConversationRef.id;
@@ -196,6 +205,15 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     });
     setShowIdentification(false);
   }
+
+  const handleDownloadBill = () => {
+    if (!conversation) {
+        toast({ variant: 'destructive', title: 'Eroare', description: 'Datele conversației nu sunt disponibile.' });
+        return;
+    }
+    generateBill(conversation, websiteName);
+  };
+
 
   const renderIdentificationForm = () => (
     <div className="p-4 space-y-4 border-b">
@@ -265,8 +283,12 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
                     if (msg.systemMessageType === 'payment_request' && msg.paymentLink) {
                         if (conversation?.paymentStatus === 'paid') {
                             return (
-                                <div key={msg.id} className="text-center text-xs text-muted-foreground my-4 p-2 bg-green-100 dark:bg-green-900/50 rounded-md flex items-center justify-center gap-2">
-                                    <CheckCircle className="h-4 w-4 text-green-600" /> Plata a fost efectuată cu succes.
+                                <div key={msg.id} className="p-4 my-2 rounded-lg border bg-green-100 dark:bg-green-900/50 text-center">
+                                    <h4 className="font-semibold flex items-center justify-center gap-2 mb-3"><CheckCircle className="text-green-600"/> Plată Confirmată</h4>
+                                    <p className="text-sm text-muted-foreground mb-3">Plata a fost procesată cu succes. Puteți descărca factura.</p>
+                                    <Button size="sm" variant="secondary" onClick={handleDownloadBill}>
+                                        <FileDown className="mr-2 h-4 w-4"/> Descarcă Factura
+                                    </Button>
                                 </div>
                             )
                         }
