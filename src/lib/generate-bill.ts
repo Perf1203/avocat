@@ -19,15 +19,32 @@ const formatDate = (date: any, dateFormat = 'dd MMMM yyyy') => {
     } else if (typeof date === 'string' || typeof date === 'number') {
         dateObj = new Date(date);
     } else {
-        return 'Data invalidă';
+        return 'Data invalida';
     }
 
     if (isNaN(dateObj.getTime())) {
-        return 'Data invalidă';
+        return 'Data invalida';
     }
 
     return format(dateObj, dateFormat, { locale: ro });
 };
+
+// Function to normalize Romanian characters
+const normalizeText = (text: string): string => {
+    if (!text) return '';
+    return text
+        .replace(/ă/g, 'a')
+        .replace(/â/g, 'a')
+        .replace(/î/g, 'i')
+        .replace(/ș/g, 's')
+        .replace(/ț/g, 't')
+        .replace(/Ă/g, 'A')
+        .replace(/Â/g, 'A')
+        .replace(/Î/g, 'I')
+        .replace(/Ș/g, 'S')
+        .replace(/Ț/g, 'T');
+};
+
 
 export const generateBill = (conversation: any, websiteName: string) => {
   const doc = new jsPDF() as jsPDFWithAutoTable;
@@ -39,79 +56,85 @@ export const generateBill = (conversation: any, websiteName: string) => {
   let totalAmount = 0;
 
   // --- Colors from Template ---
-  const headerBgColor = '#2C5282'; // A darker blue from the theme
-  const titleColor = '#FFFFFF';
-  const labelColor = '#4A5568'; // A muted gray
-  const textColor = '#2D3748'; // Darker text
-  const tableHeaderBg = '#EBF8FF'; // Light blue
-  const tableHeaderColor = '#2C5282';
-  const borderColor = '#E2E8F0';
-
-  // --- Header ---
-  doc.setFillColor(headerBgColor);
-  doc.rect(0, 0, doc.internal.pageSize.getWidth(), 50, 'F');
+  const primaryColor = '#2C5282'; 
+  const secondaryColor = '#7ba8c1';
+  const textColor = '#2D3748';
+  const lightGray = '#F7F9FC';
+  const midGray = '#E2E8F0';
+  const darkGray = '#4A5568';
   
+
+  // --- Header with Wave ---
+  doc.setFillColor(primaryColor);
+  doc.path([
+    { op: 'm', c: [0, 0] },
+    { op: 'l', c: [doc.internal.pageSize.getWidth(), 0] },
+    { op: 'l', c: [doc.internal.pageSize.getWidth(), 60] },
+    { op: 'l', c: [0, 80] },
+    { op: 'l', c: [0, 0] },
+    { op: 'f'}
+  ]).stroke();
+
+  // --- Header Content ---
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(28);
-  doc.setTextColor(titleColor);
-  doc.text('FACTURĂ', 20, 30);
-
-  doc.setFont('helvetica', 'normal');
+  doc.setTextColor('#FFFFFF');
+  doc.text(normalizeText('FACTURĂ'), 20, 35);
+  
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  doc.text(websiteName, doc.internal.pageSize.getWidth() - 20, 30, { align: 'right' });
+  doc.text(normalizeText(websiteName), doc.internal.pageSize.getWidth() - 20, 35, { align: 'right' });
 
 
-  // --- Parties Info ---
-  const partiesY = 70;
+  // --- Parties & Details Info ---
+  const partiesY = 100;
   
   // FROM
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(labelColor);
-  doc.text('DE LA:', 20, partiesY);
+  doc.setTextColor(secondaryColor);
+  doc.text(normalizeText('DE LA:'), 20, partiesY);
   
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(textColor);
-  doc.text(websiteName, 20, partiesY + 7);
-  // You can add more company details here if available
-  // doc.text('Adresa companiei', 20, partiesY + 14);
+  doc.text(normalizeText(websiteName), 20, partiesY + 7);
 
 
   // TO
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(labelColor);
-  doc.text('FACTURAT CĂTRE:', 80, partiesY);
+  doc.setTextColor(secondaryColor);
+  doc.text(normalizeText('FACTURAT CĂTRE:'), 80, partiesY);
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(textColor);
-  doc.text(clientName, 80, partiesY + 7);
+  doc.text(normalizeText(clientName), 80, partiesY + 7);
   if (conversation.guestEmail) {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(textColor);
-    doc.text(conversation.guestEmail, 80, partiesY + 14);
+    doc.text(normalizeText(conversation.guestEmail), 80, partiesY + 14);
   }
 
   // INVOICE DETAILS
   const detailsX = doc.internal.pageSize.getWidth() - 70;
-  
-  doc.setFontSize(10);
+  const detailsValueX = doc.internal.pageSize.getWidth() - 20;
+
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(labelColor);
-  doc.text('NR. FACTURĂ:', detailsX, partiesY);
-  doc.text('DATA FACTURII:', detailsX, partiesY + 7);
+  doc.setTextColor(secondaryColor);
+  doc.text(normalizeText('NR. FACTURĂ:'), detailsX, partiesY);
+  doc.text(normalizeText('DATA FACTURII:'), detailsX, partiesY + 7);
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(textColor);
-  doc.text(invoiceNumber, doc.internal.pageSize.getWidth() - 20, partiesY, { align: 'right' });
-  doc.text(formatDate(invoiceDate), doc.internal.pageSize.getWidth() - 20, partiesY + 7, { align: 'right' });
+  doc.text(invoiceNumber, detailsValueX, partiesY, { align: 'right' });
+  doc.text(normalizeText(formatDate(invoiceDate)), detailsValueX, partiesY + 7, { align: 'right' });
 
 
   // --- Table of Services ---
   const tableBody = confirmedPayments.map((payment: any) => {
       totalAmount += payment.amount;
-      const paymentDate = formatDate(payment.confirmedAt, 'dd/MM/yyyy HH:mm');
-      // Using "Consultanta" to avoid character encoding issues in PDF
+      const paymentDate = normalizeText(formatDate(payment.confirmedAt, 'dd/MM/yyyy HH:mm'));
       return [
         `Consultanta Online - ${paymentDate}`,
         '1',
@@ -122,28 +145,23 @@ export const generateBill = (conversation: any, websiteName: string) => {
 
   doc.autoTable({
     startY: partiesY + 30,
-    head: [['DESCRIERE', 'CANT.', 'PREȚ UNITAR', 'TOTAL']],
+    head: [[normalizeText('DESCRIERE'), 'CANT.', normalizeText('PREȚ UNITAR'), 'TOTAL']],
     body: tableBody,
     theme: 'grid',
     headStyles: { 
-        fillColor: tableHeaderBg,
-        textColor: tableHeaderColor,
+        fillColor: primaryColor,
+        textColor: '#FFFFFF',
         fontSize: 10,
         fontStyle: 'bold',
-        cellPadding: 3,
     },
     styles: { 
         fontSize: 10,
-        cellPadding: 3,
-        lineColor: borderColor,
+        lineColor: midGray,
         lineWidth: 0.1,
     },
     didParseCell: function(data) {
-        if (data.section === 'head') {
+        if (data.section === 'head' || data.section === 'foot') {
             data.cell.styles.halign = 'center';
-        }
-        if (data.column.index === 0 && data.section === 'body') {
-            data.cell.styles.halign = 'left';
         }
         if (data.column.index > 0 && data.section === 'body') {
             data.cell.styles.halign = 'right';
@@ -157,27 +175,24 @@ export const generateBill = (conversation: any, websiteName: string) => {
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(labelColor);
-  doc.text('Subtotal:', totalSectionX - 50, finalY + 15, { align: 'right' });
+  doc.setTextColor(darkGray);
+  doc.text(normalizeText('Subtotal:'), totalSectionX - 50, finalY + 15, { align: 'right' });
   doc.text(`${totalAmount.toFixed(2)} €`, totalSectionX, finalY + 15, { align: 'right' });
-
-  doc.setDrawColor(borderColor);
-  doc.line(totalSectionX - 80, finalY + 22, totalSectionX, finalY + 22);
   
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(textColor);
-  doc.text('Total General:', totalSectionX - 50, finalY + 30, { align: 'right' });
-  doc.text(`${totalAmount.toFixed(2)} €`, totalSectionX, finalY + 30, { align: 'right' });
+  doc.text(normalizeText('Total General:'), totalSectionX - 50, finalY + 25, { align: 'right' });
+  doc.text(`${totalAmount.toFixed(2)} €`, totalSectionX, finalY + 25, { align: 'right' });
 
   // --- Footer ---
   const pageHeight = doc.internal.pageSize.getHeight();
-  doc.setDrawColor(borderColor);
+  doc.setDrawColor(midGray);
   doc.line(20, pageHeight - 35, doc.internal.pageSize.getWidth() - 20, pageHeight - 35);
   doc.setFontSize(9);
-  doc.setTextColor('#94a3b8');
-  doc.text(`Vă mulțumim pentru încredere!`, doc.internal.pageSize.getWidth() / 2, pageHeight - 25, { align: 'center' });
-  doc.text(`Factură generată pentru ${clientName} de către ${websiteName}.`, doc.internal.pageSize.getWidth() / 2, pageHeight - 20, { align: 'center' });
+  doc.setTextColor(darkGray);
+  doc.text(normalizeText('Vă mulțumim pentru încredere!'), doc.internal.pageSize.getWidth() / 2, pageHeight - 25, { align: 'center' });
+  doc.text(normalizeText(`Factură generată pentru ${clientName} de către ${websiteName}.`), doc.internal.pageSize.getWidth() / 2, pageHeight - 20, { align: 'center' });
 
 
   // --- Save the PDF ---
