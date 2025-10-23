@@ -22,10 +22,13 @@ import {
   Shield,
   Briefcase,
   Scale,
-  type LucideIcon
+  type LucideIcon,
+  Edit,
+  Check,
+  X,
 } from "lucide-react";
 import Link from "next/link";
-import { collection, doc, query, orderBy } from "firebase/firestore";
+import { collection, doc, query, orderBy, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,12 +38,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useFirebase, useUser, useDoc, useCollection, useMemoFirebase } from "@/firebase";
+import { Input } from "@/components/ui/input";
+import { useFirebase, useUser, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import * as LucideIcons from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+
 
 // Default Content
 const defaultContent = {
@@ -51,11 +57,6 @@ const defaultContent = {
         imageUrl: "https://i.postimg.cc/13Yp8kG1/bermix-studio-a-VCH-3-B-7-E-unsplash.jpg",
         imageHint: "law office"
     },
-    stats: [
-        { icon: "Award", value: 98, label: "Rata de Succes (%)" },
-        { icon: "Users", value: 1200, label: "Clienți Mulțumiți" },
-        { icon: "TrendingUp", value: 20, label: "Ani de Experiență" },
-    ],
     about: {
         title: "Angajament, Integritate și Rezultate Excepționale",
         text1: "Fondată pe principiile integrității și excelenței, Avocat Law este mai mult decât un birou de avocatură - suntem partenerii strategici ai clienților noștri. Misiunea noastră este să oferim consiliere juridică clară, pragmatică și adaptată obiectivelor specifice ale fiecărui client.",
@@ -103,7 +104,7 @@ const AnimatedSection = ({ children, className }: { children: React.ReactNode, c
     );
 };
 
-function AnimatedNumber({ value, duration = 2000 }: { value: number, duration?: number }) {
+function AnimatedNumber({ value, suffix, duration = 2000 }: { value: number, suffix: string, duration?: number }) {
   const [count, setCount] = useState(0);
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.5 });
 
@@ -128,13 +129,22 @@ function AnimatedNumber({ value, duration = 2000 }: { value: number, duration?: 
     }
   }, [inView, value, duration]);
 
-  return <span ref={ref}>{count}</span>;
+  return <span ref={ref}>{count}{suffix}</span>;
 }
+
+const StatIcon = ({ name }: { name: string }) => {
+    const Icon = iconMap[name];
+    return Icon ? <Icon className="h-8 w-8 text-accent" /> : null;
+};
 
 
 export default function Home() {
   const { firestore } = useFirebase();
   const { user } = useUser();
+  const { toast } = useToast();
+
+  const [isEditingStats, setIsEditingStats] = useState(false);
+  const [editingStats, setEditingStats] = useState<{[key: string]: number}>({});
 
   const adminRoleRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -158,6 +168,9 @@ export default function Home() {
   const blogPostsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "blog_posts"), orderBy("date", "desc")) : null, [firestore]);
   const { data: blogPosts, isLoading: areBlogPostsLoading } = useCollection(blogPostsQuery);
 
+  const statsCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, "stats") : null, [firestore]);
+  const { data: statsData, isLoading: areStatsLoading } = useCollection(statsCollectionRef);
+
   const [content, setContent] = useState(defaultContent);
 
   useEffect(() => {
@@ -172,18 +185,50 @@ export default function Home() {
       setContent(newContent);
     }
   }, [contentData]);
-
-  const StatIcon = ({ name }: { name: string }) => {
-    const Icon = iconMap[name];
-    return Icon ? <Icon className="h-8 w-8 text-accent" /> : null;
-  }
   
-  const AreaIcon = ({ name = 'Gavel' }: { name?: string }) => {
-      const Icon = iconMap[name] || Gavel;
-      return <Icon className="h-10 w-10 text-primary group-hover:text-accent transition-colors duration-300" />;
+  const handleStatChange = (id: string, value: string) => {
+    const numericValue = parseInt(value, 10);
+    setEditingStats(prev => ({
+        ...prev,
+        [id]: isNaN(numericValue) ? 0 : numericValue
+    }));
   };
 
-  const isLoading = isContentLoading || isLoadingRole;
+  const handleSaveStats = async () => {
+    if (!firestore) return;
+    
+    const updates = Object.keys(editingStats).map(id => {
+      const statRef = doc(firestore, 'stats', id);
+      return setDoc(statRef, { value: editingStats[id] }, { merge: true });
+    });
+
+    try {
+      await Promise.all(updates);
+      toast({
+        title: "Statistici Actualizate",
+        description: "Valorile au fost salvate cu succes.",
+      });
+    } catch (error) {
+       toast({
+        title: "Eroare",
+        description: "Nu s-au putut salva statisticile.",
+        variant: "destructive"
+      });
+      console.error("Error saving stats: ", error);
+    } finally {
+      setIsEditingStats(false);
+      setEditingStats({});
+    }
+  };
+
+  const handleCancelEditStats = () => {
+    setIsEditingStats(false);
+    setEditingStats({});
+  };
+  
+  const isLoading = isContentLoading || isLoadingRole || areStatsLoading;
+  
+  const sortedStats = statsData ? [...statsData].sort((a, b) => a.order - b.order) : [];
 
   return (
     <>
@@ -244,17 +289,58 @@ export default function Home() {
         <section className="border-b bg-background py-16 sm:py-20">
             <div className="container">
                 <AnimatedSection>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-y-10 md:gap-y-0 md:gap-x-8">
-                      {(content.stats as { icon: string; value: number; label: string }[]).map((stat, index) => (
-                          <div key={stat.label} className="text-center flex flex-col items-center">
-                            <StatIcon name={stat.icon} />
-                            <p className="text-5xl font-bold text-primary mt-3">
-                              <AnimatedNumber value={stat.value} />
-                              {stat.label.includes('%') ? '%' : '+'}
-                            </p>
-                            <p className="mt-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{stat.label.replace(' (%)', '')}</p>
-                          </div>
-                      ))}
+                  <div className="relative">
+                    {isUserAdmin && !isEditingStats && (
+                         <Button onClick={() => setIsEditingStats(true)} variant="outline" size="sm" className="absolute -top-8 right-0">
+                           <Edit className="mr-2 h-4 w-4" /> Editează Statisticile
+                         </Button>
+                    )}
+                    {isEditingStats && (
+                      <div className="absolute -top-8 right-0 flex gap-2">
+                         <Button onClick={handleSaveStats} variant="default" size="sm">
+                           <Check className="mr-2 h-4 w-4" /> Salvează
+                         </Button>
+                         <Button onClick={handleCancelEditStats} variant="secondary" size="sm">
+                           <X className="mr-2 h-4 w-4" /> Anulează
+                         </Button>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-y-10 md:gap-y-0 md:gap-x-8">
+                       {isLoading ? (
+                           [...Array(3)].map((_, index) => (
+                             <div key={index} className="text-center flex flex-col items-center">
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                                <Skeleton className="h-12 w-32 mt-3" />
+                                <div className="mt-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <Skeleton className="h-5 w-40" />
+                                </div>
+                             </div>
+                           ))
+                       ) : sortedStats.map((stat: any) => {
+                          const suffix = stat.label.includes('%') ? '%' : (stat.label.includes('+') ? '+' : '');
+                          return (
+                              <div key={stat.id} className="text-center flex flex-col items-center">
+                                <StatIcon name={stat.icon} />
+                                {isEditingStats ? (
+                                    <div className="flex items-center mt-3">
+                                      <Input
+                                          type="number"
+                                          value={editingStats[stat.id] ?? stat.value}
+                                          onChange={(e) => handleStatChange(stat.id, e.target.value)}
+                                          className="text-5xl font-bold text-primary text-center p-0 h-auto bg-transparent border-primary w-32"
+                                      />
+                                      {suffix && <span className="text-5xl font-bold text-primary">{suffix}</span>}
+                                    </div>
+                                ) : (
+                                  <p className="text-5xl font-bold text-primary mt-3">
+                                    <AnimatedNumber value={stat.value} suffix={suffix} />
+                                  </p>
+                                )}
+                                <p className="mt-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{stat.label.replace(' (%)', '').replace('+', '')}</p>
+                              </div>
+                          );
+                       })}
+                    </div>
                   </div>
                 </AnimatedSection>
             </div>
