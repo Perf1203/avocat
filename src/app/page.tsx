@@ -149,9 +149,6 @@ export default function Home() {
   const { user } = useUser();
   const { toast } = useToast();
 
-  const [isEditingStats, setIsEditingStats] = useState(false);
-  const [editingStats, setEditingStats] = useState<{[key: string]: number}>({});
-
   const adminRoleRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'roles_admin', user.uid);
@@ -191,46 +188,6 @@ export default function Home() {
       setContent(newContent);
     }
   }, [contentData]);
-  
-  const handleStatChange = (id: string, value: string) => {
-    const numericValue = parseInt(value, 10);
-    setEditingStats(prev => ({
-        ...prev,
-        [id]: isNaN(numericValue) ? 0 : numericValue
-    }));
-  };
-
-  const handleSaveStats = async () => {
-    if (!firestore) return;
-    
-    const updates = Object.keys(editingStats).map(id => {
-      const statRef = doc(firestore, 'stats', id);
-      return updateDocumentNonBlocking(statRef, { value: editingStats[id] });
-    });
-
-    try {
-      await Promise.all(updates);
-      toast({
-        title: "Statistici Actualizate",
-        description: "Valorile au fost salvate cu succes.",
-      });
-    } catch (error) {
-       toast({
-        title: "Eroare",
-        description: "Nu s-au putut salva statisticile.",
-        variant: "destructive"
-      });
-      console.error("Error saving stats: ", error);
-    } finally {
-      setIsEditingStats(false);
-      setEditingStats({});
-    }
-  };
-
-  const handleCancelEditStats = () => {
-    setIsEditingStats(false);
-    setEditingStats({});
-  };
   
   const isLoading = isContentLoading || isLoadingRole || areStatsLoading;
   
@@ -296,21 +253,6 @@ export default function Home() {
             <div className="container">
                 <AnimatedSection>
                   <div className="relative">
-                    {isUserAdmin && !isEditingStats && (
-                         <Button onClick={() => setIsEditingStats(true)} variant="outline" size="sm" className="absolute -top-8 right-0">
-                           <Edit className="mr-2 h-4 w-4" /> Editează Statisticile
-                         </Button>
-                    )}
-                    {isEditingStats && (
-                      <div className="absolute -top-8 right-0 flex gap-2">
-                         <Button onClick={handleSaveStats} variant="default" size="sm">
-                           <Check className="mr-2 h-4 w-4" /> Salvează
-                         </Button>
-                         <Button onClick={handleCancelEditStats} variant="secondary" size="sm">
-                           <X className="mr-2 h-4 w-4" /> Anulează
-                         </Button>
-                      </div>
-                    )}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-y-10 md:gap-y-0 md:gap-x-8">
                        {areStatsLoading ? (
                            [...Array(3)].map((_, index) => (
@@ -331,21 +273,9 @@ export default function Home() {
                               <div key={stat.id} className="text-center flex flex-col items-center">
                                 <StatIcon name={stat.icon} />
                                 <div className="flex items-center mt-3">
-                                {isEditingStats ? (
-                                    <>
-                                      <Input
-                                          type="number"
-                                          defaultValue={stat.value}
-                                          onChange={(e) => handleStatChange(stat.id, e.target.value)}
-                                          className="text-5xl font-bold text-primary text-center p-0 h-auto bg-transparent border-primary w-32"
-                                      />
-                                      {suffix && <span className="text-5xl font-bold text-primary">{suffix}</span>}
-                                    </>
-                                ) : (
                                   <p className="text-5xl font-bold text-primary">
                                     <AnimatedNumber value={stat.value} suffix={suffix} />
                                   </p>
-                                )}
                                 </div>
                                 <p className="mt-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{stat.label.replace(' (%)', '').replace('+', '')}</p>
                               </div>
@@ -612,5 +542,3 @@ export default function Home() {
     </>
   );
 }
-
-    
