@@ -4,8 +4,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirebase, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, addDoc, serverTimestamp, setDoc, where } from 'firebase/firestore';
-import { Send, ArrowLeft, CircleUserRound, UserPlus, CreditCard, CheckCircle, Clock, AlertCircle, FileDown } from 'lucide-react';
+import { collection, query, orderBy, doc, addDoc, serverTimestamp, updateDoc, arrayUnion } from 'firebase/firestore';
+import { Send, ArrowLeft, CircleUserRound, UserPlus, CreditCard, CheckCircle, Clock, AlertCircle, FileDown, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -24,6 +24,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Label } from '@/components/ui/label';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { generateBill } from '@/lib/generate-bill';
@@ -192,7 +198,7 @@ export default function ChatConversationPage() {
     }
 
     const paymentData = {
-        paymentLink: paymentLink,
+        paymentLink,
         paymentAmount: amount,
         paymentStatus: 'pending',
         paymentRequestedAt: serverTimestamp()
@@ -220,21 +226,31 @@ export default function ChatConversationPage() {
   };
 
   const handleConfirmPayment = () => {
-    if (!conversationRef || !user) return;
+    if (!conversationRef || !user || !conversation?.paymentAmount) return;
     setTimerExpired(false); // Reset timer expired state
     const followUpDate = new Date();
     followUpDate.setMinutes(followUpDate.getMinutes() + 150); // 2.5 hours from now
 
+    const confirmedPayment = {
+        amount: conversation.paymentAmount,
+        link: conversation.paymentLink,
+        confirmedAt: serverTimestamp(),
+    };
+
+    // Atomically update conversation
     updateDocumentNonBlocking(conversationRef, { 
-      paymentStatus: 'paid',
-      paymentConfirmationDate: serverTimestamp(),
-      followUpAt: followUpDate,
+      payments: arrayUnion(confirmedPayment),
+      paymentStatus: 'paid', // Keep this to show "Factura" button, might change logic later
+      paymentAmount: null, // Clear pending amount
+      paymentLink: null, // Clear pending link
+      paymentRequestedAt: null, // Clear pending request time
+      followUpAt: followUpDate, // Set new follow-up
       reminderAt: null // Clear the initial reminder
     });
 
      const messagesCol = collection(firestore, 'conversations', conversationId, 'messages');
     addDocumentNonBlocking(messagesCol, {
-        text: 'Plata a fost confirmată de către administrator.',
+        text: `Plata de ${conversation.paymentAmount}€ a fost confirmată.`,
         senderId: user?.uid,
         timestamp: serverTimestamp(),
         isSystemMessage: true,
@@ -248,8 +264,8 @@ export default function ChatConversationPage() {
   };
 
   const handleDownloadBill = () => {
-    if (!conversation) {
-        toast({ variant: 'destructive', title: 'Eroare', description: 'Datele conversației nu sunt disponibile.' });
+    if (!conversation || !conversation.payments || conversation.payments.length === 0) {
+        toast({ variant: 'destructive', title: 'Eroare', description: 'Nicio plată confirmată pentru a genera factura.' });
         return;
     }
     generateBill(conversation, websiteName);
@@ -261,11 +277,11 @@ export default function ChatConversationPage() {
 
   const guestDisplayName = conversation?.guestName || 'Vizitator';
   const guestDisplayInfo = conversation?.guestEmail || (conversation?.guestId ? `${conversation.guestId.substring(0, 12)}...` : '');
-  const isGuestAnonymous = !conversation?.guestName;
-
+  
   const activeTimerDate = conversation?.followUpAt?.toDate() || conversation?.reminderAt?.toDate() || null;
-  const isFollowUpTimer = !!conversation?.followUpAt && conversation?.paymentStatus === 'paid';
+  const isFollowUpTimer = !!conversation?.followUpAt && !!conversation?.payments?.length;
 
+  const hasConfirmedPayments = conversation?.payments && conversation.payments.length > 0;
 
   return (
     <div className="container py-12">
@@ -289,28 +305,38 @@ export default function ChatConversationPage() {
              </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            {isGuestAnonymous && (
-                <Button variant="outline" size="sm" onClick={handleRequestIdentification} className="text-xs px-2 sm:px-3">
-                <UserPlus className="mr-1 h-4 w-4"/>
-                Solicită
-                </Button>
-            )}
-             {conversation?.paymentStatus === 'pending' ? (
+             {conversation?.paymentStatus === 'pending' && (
                 <Button size="sm" onClick={handleConfirmPayment} className="text-xs px-2 sm:px-3">
                     <CheckCircle className="mr-1 h-4 w-4"/>
                     Confirmă
                 </Button>
-             ) : conversation?.paymentStatus === 'paid' ? (
-                <Button size="sm" variant="secondary" onClick={handleDownloadBill} className="text-xs px-2 sm:px-3">
-                    <FileDown className="mr-1 h-4 w-4"/>
-                    Factură
-                </Button>
-             ) : (
-                <Button size="sm" onClick={() => setShowPaymentDialog(true)} className="text-xs px-2 sm:px-3">
-                    <CreditCard className="mr-1 h-4 w-4"/>
-                    Plată
-                </Button>
              )}
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-4 w-4" />
+                        <span className="sr-only">Mai multe acțiuni</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    {!conversation?.guestName && (
+                        <DropdownMenuItem onClick={handleRequestIdentification}>
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            <span>Solicită Identitate</span>
+                        </DropdownMenuItem>
+                    )}
+                     <DropdownMenuItem onClick={() => setShowPaymentDialog(true)}>
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        <span>Solicită Plată</span>
+                    </DropdownMenuItem>
+                    {hasConfirmedPayments && (
+                        <DropdownMenuItem onClick={handleDownloadBill}>
+                            <FileDown className="mr-2 h-4 w-4" />
+                            <span>Descarcă Factura</span>
+                        </DropdownMenuItem>
+                    )}
+                </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
         <CardContent className="flex-1 p-0 overflow-hidden">

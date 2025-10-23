@@ -13,9 +13,11 @@ interface jsPDFWithAutoTable extends jsPDF {
 export const generateBill = (conversation: any, websiteName: string) => {
   const doc = new jsPDF() as jsPDFWithAutoTable;
   const clientName = conversation.guestName || 'Vizitator';
-  const paymentDate = conversation.paymentConfirmationDate?.toDate() || new Date();
+  const invoiceDate = new Date();
   const invoiceNumber = `FACT-${Date.now()}`;
-  const amount = conversation.paymentAmount || 0;
+  
+  const confirmedPayments = conversation.payments || [];
+  let totalAmount = 0;
 
   // Header
   doc.setFontSize(20);
@@ -50,15 +52,23 @@ export const generateBill = (conversation: any, websiteName: string) => {
   doc.setFont('helvetica', 'bold');
   doc.text('Data Facturării:', 140, 50);
   doc.setFont('helvetica', 'normal');
-  doc.text(format(paymentDate, 'dd MMMM yyyy', { locale: ro }), 170, 50);
+  doc.text(format(invoiceDate, 'dd MMMM yyyy', { locale: ro }), 170, 50);
 
   // Table
+  const tableBody = confirmedPayments.map((payment: any) => {
+      totalAmount += payment.amount;
+      return [
+        `Consultanță (${format(payment.confirmedAt.toDate(), 'dd/MM/yy HH:mm')})`,
+        '1',
+        `${payment.amount.toFixed(2)} €`,
+        `${payment.amount.toFixed(2)} €`,
+      ];
+  });
+
   doc.autoTable({
     startY: 65,
     head: [['Descriere Serviciu', 'Cantitate', 'Preț Unitar', 'Total']],
-    body: [
-      ['Consultanță Juridică Online', '1', `${amount.toFixed(2)} €`, `${amount.toFixed(2)} €`],
-    ],
+    body: tableBody,
     theme: 'striped',
     headStyles: { fillColor: [34, 40, 49] }, // --primary color
     styles: { fontSize: 10 },
@@ -70,7 +80,7 @@ export const generateBill = (conversation: any, websiteName: string) => {
   doc.setFont('helvetica', 'bold');
   doc.text('Total de Plată:', 140, finalY + 15);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${amount.toFixed(2)} €`, 200, finalY + 15, { align: 'right' });
+  doc.text(`${totalAmount.toFixed(2)} €`, 200, finalY + 15, { align: 'right' });
 
   // Footer
   doc.setFontSize(8);

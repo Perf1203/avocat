@@ -332,26 +332,33 @@
         },
         "paymentLink": {
             "type": "string",
-            "description": "The payment link sent by the admin to the guest."
+            "description": "The payment link for a PENDING payment request."
         },
         "paymentAmount": {
             "type": "number",
-            "description": "The amount requested for payment."
+            "description": "The amount for a PENDING payment request."
         },
         "paymentStatus": {
             "type": "string",
             "enum": ["pending", "paid"],
-            "description": "The status of the payment request."
+            "description": "The status of the most recent payment request."
         },
         "paymentRequestedAt": {
             "type": "string",
             "format": "date-time",
-            "description": "Timestamp when the payment was requested."
+            "description": "Timestamp when the last payment was requested."
         },
-         "paymentConfirmationDate": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp when the payment was confirmed by the admin."
+        "payments": {
+            "type": "array",
+            "description": "A list of all confirmed payments.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "amount": { "type": "number" },
+                    "link": { "type": "string" },
+                    "confirmedAt": { "type": "string", "format": "date-time" }
+                }
+            }
         },
         "reminderAt": {
             "type": "string",
