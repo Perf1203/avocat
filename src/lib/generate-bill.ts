@@ -59,21 +59,20 @@ export const generateBill = (conversation: any, websiteName: string) => {
   const primaryColor = '#2C5282'; 
   const secondaryColor = '#7ba8c1';
   const textColor = '#2D3748';
-  const lightGray = '#F7F9FC';
   const midGray = '#E2E8F0';
   const darkGray = '#4A5568';
   
 
   // --- Header with Wave ---
-  doc.setFillColor(primaryColor);
-  doc.path([
-    { op: 'm', c: [0, 0] },
-    { op: 'l', c: [doc.internal.pageSize.getWidth(), 0] },
-    { op: 'l', c: [doc.internal.pageSize.getWidth(), 60] },
-    { op: 'l', c: [0, 80] },
-    { op: 'l', c: [0, 0] },
-    { op: 'f'}
-  ]).stroke();
+    doc.setFillColor(primaryColor);
+    doc.path([
+        { op: 'm', c: [0, 0] },
+        { op: 'l', c: [doc.internal.pageSize.getWidth(), 0] },
+        { op: 'l', c: [doc.internal.pageSize.getWidth(), 60] },
+        { op: 'l', c: [0, 80] },
+        { op: 'l', c: [0, 0] },
+        { op: 'f'}
+    ]).stroke();
 
   // --- Header Content ---
   doc.setFont('helvetica', 'bold');
@@ -87,7 +86,7 @@ export const generateBill = (conversation: any, websiteName: string) => {
 
 
   // --- Parties & Details Info ---
-  const partiesY = 100;
+  const partiesY = 90;
   
   // FROM
   doc.setFontSize(10);
@@ -104,7 +103,7 @@ export const generateBill = (conversation: any, websiteName: string) => {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(secondaryColor);
-  doc.text(normalizeText('FACTURAT CĂTRE:'), 80, partiesY);
+  doc.text(normalizeText('FACTURAT CATRE:'), 80, partiesY);
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(textColor);
@@ -116,7 +115,7 @@ export const generateBill = (conversation: any, websiteName: string) => {
   }
   
   // INVOICE DETAILS
-  const detailsLabelX = doc.internal.pageSize.getWidth() - 70;
+  const detailsLabelX = doc.internal.pageSize.getWidth() - 80;
   const detailsValueX = doc.internal.pageSize.getWidth() - 20;
 
   doc.setFontSize(9);
@@ -131,7 +130,6 @@ export const generateBill = (conversation: any, websiteName: string) => {
   doc.text(normalizeText(formatDate(invoiceDate)), detailsValueX, partiesY + 7, { align: 'right' });
 
 
-
   // --- Table of Services ---
   const tableBody = confirmedPayments.map((payment: any) => {
       totalAmount += payment.amount;
@@ -139,14 +137,14 @@ export const generateBill = (conversation: any, websiteName: string) => {
       return [
         `Consultanta Online - ${paymentDate}`,
         '1',
-        `${payment.amount.toFixed(2)} €`,
-        `${payment.amount.toFixed(2)} €`,
+        `${payment.amount.toFixed(2)} EUR`,
+        `${payment.amount.toFixed(2)} EUR`,
       ];
   });
 
   doc.autoTable({
     startY: partiesY + 30,
-    head: [[normalizeText('DESCRIERE'), 'CANT.', normalizeText('PREȚ UNITAR'), 'TOTAL']],
+    head: [[normalizeText('DESCRIERE'), 'CANT.', normalizeText('PRET UNITAR'), 'TOTAL']],
     body: tableBody,
     theme: 'grid',
     headStyles: { 
@@ -178,13 +176,13 @@ export const generateBill = (conversation: any, websiteName: string) => {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(darkGray);
   doc.text(normalizeText('Subtotal:'), totalSectionX - 50, finalY + 15, { align: 'right' });
-  doc.text(`${totalAmount.toFixed(2)} €`, totalSectionX, finalY + 15, { align: 'right' });
+  doc.text(`${totalAmount.toFixed(2)} EUR`, totalSectionX, finalY + 15, { align: 'right' });
   
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(textColor);
   doc.text(normalizeText('Total General:'), totalSectionX - 50, finalY + 25, { align: 'right' });
-  doc.text(`${totalAmount.toFixed(2)} €`, totalSectionX, finalY + 25, { align: 'right' });
+  doc.text(`${totalAmount.toFixed(2)} EUR`, totalSectionX, finalY + 25, { align: 'right' });
 
   // --- Footer ---
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -192,8 +190,8 @@ export const generateBill = (conversation: any, websiteName: string) => {
   doc.line(20, pageHeight - 35, doc.internal.pageSize.getWidth() - 20, pageHeight - 35);
   doc.setFontSize(9);
   doc.setTextColor(darkGray);
-  doc.text(normalizeText('Vă mulțumim pentru încredere!'), doc.internal.pageSize.getWidth() / 2, pageHeight - 25, { align: 'center' });
-  doc.text(normalizeText(`Factură generată pentru ${clientName} de către ${websiteName}.`), doc.internal.pageSize.getWidth() / 2, pageHeight - 20, { align: 'center' });
+  doc.text(normalizeText('Va multumim pentru incredere!'), doc.internal.pageSize.getWidth() / 2, pageHeight - 25, { align: 'center' });
+  doc.text(normalizeText(`Factura generata pentru ${clientName} de catre ${websiteName}.`), doc.internal.pageSize.getWidth() / 2, pageHeight - 20, { align: 'center' });
 
 
   // --- Save the PDF ---
