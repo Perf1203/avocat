@@ -32,7 +32,10 @@ const CountdownTimer = ({ targetDate, onExpire }: { targetDate: Date | null, onE
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
-    if (!targetDate) return;
+    if (!targetDate) {
+        setTimeLeft('');
+        return;
+    };
 
     const calculateTimeLeft = () => {
       const now = new Date();
@@ -63,10 +66,10 @@ const CountdownTimer = ({ targetDate, onExpire }: { targetDate: Date | null, onE
     return () => clearInterval(interval);
   }, [targetDate, onExpire]);
 
-  if (!targetDate) return null;
+  if (!targetDate || timeLeft === 'Timp expirat') return null;
 
   return (
-    <span className={cn("text-xs font-mono flex items-center gap-1", timeLeft === 'Timp expirat' ? "text-destructive" : "text-amber-600")}>
+    <span className="text-xs font-mono flex items-center gap-1 text-amber-600">
         <Clock className="h-3 w-3" />
         {timeLeft}
     </span>
@@ -111,13 +114,14 @@ export default function ChatConversationPage() {
 
   useEffect(() => {
     if (scrollAreaRef.current) {
-        setTimeout(() => {
-            if(scrollAreaRef.current) {
-                scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
-            }
-        }, 100);
+        const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) {
+             setTimeout(() => {
+                viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+            }, 100);
+        }
     }
-  }, [messages, timerExpired]);
+  }, [messages, timerExpired, isLoadingMessages]);
 
   useEffect(() => {
     // Mark conversation as read by admin
@@ -125,6 +129,10 @@ export default function ChatConversationPage() {
       updateDocumentNonBlocking(conversationRef, { isReadByAdmin: true });
     }
   }, [conversationRef, conversation]);
+  
+  useEffect(() => {
+    setTimerExpired(false);
+  }, [conversationId]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,6 +203,7 @@ export default function ChatConversationPage() {
 
   const handleConfirmPayment = () => {
     if (!conversationRef || !user) return;
+    setTimerExpired(false); // Reset timer expired state
     const followUpDate = new Date();
     followUpDate.setMinutes(followUpDate.getMinutes() + 150); // 2.5 hours from now
 
@@ -228,7 +237,7 @@ export default function ChatConversationPage() {
   const isGuestAnonymous = !conversation?.guestName;
 
   const activeTimerDate = conversation?.followUpAt?.toDate() || conversation?.reminderAt?.toDate() || null;
-  const isFollowUpTimer = !!conversation?.followUpAt;
+  const isFollowUpTimer = !!conversation?.followUpAt && conversation?.paymentStatus === 'paid';
 
 
   return (
@@ -272,23 +281,21 @@ export default function ChatConversationPage() {
              )}
           </div>
         </CardHeader>
-        <CardContent className="flex-1 p-0">
+        <CardContent className="flex-1 p-0 overflow-hidden">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
-            {timerExpired && (
-                 <div className="p-4">
-                    <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Timpul a Expirat!</AlertTitle>
-                        <AlertDescription>
-                            {isFollowUpTimer 
-                                ? 'Au trecut 2.5 ore de la plată. Este timpul pentru un follow-up sau pentru a oferi asistență suplimentară.'
-                                : 'Au trecut 10 minute. Vă rugăm să solicitați identificarea și/sau plata pentru a continua.'
-                            }
-                        </AlertDescription>
-                    </Alert>
-                </div>
-            )}
             <div className="p-6 space-y-4">
+              {timerExpired && (
+                  <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Timpul a Expirat!</AlertTitle>
+                      <AlertDescription>
+                          {isFollowUpTimer 
+                              ? 'Au trecut 2.5 ore de la plată. Este timpul pentru un follow-up sau pentru a oferi asistență suplimentară.'
+                              : 'Au trecut 10 minute. Vă rugăm să solicitați identificarea și/sau plata pentru a continua.'
+                          }
+                      </AlertDescription>
+                  </Alert>
+              )}
               {isLoadingMessages ? (
                  <div className="space-y-4">
                     <Skeleton className="h-10 w-3/4" />

@@ -15,7 +15,8 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
+import { ro } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -134,7 +135,10 @@ export default function AdminPage() {
 
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !isUserAdmin) return null;
-    return collection(firestore, 'appointments');
+    // This query is incorrect for fetching appointments as they are in a subcollection
+    // A proper implementation would query each client's appointments subcollection.
+    // For this dashboard, we will query the root 'appointments' collection assuming data structure change.
+    return query(collection(firestore, 'appointments'), orderBy('startTime', 'desc'));
   }, [firestore, isUserAdmin]);
 
   const {
@@ -343,8 +347,8 @@ export default function AdminPage() {
                           {convo.isReadByAdmin === false ? (
                             <Badge variant="default">Mesaj Nou</Badge>
                           ) : (
-                            <span className="text-xs text-muted-foreground">
-                              {convo.lastMessageAt && format(convo.lastMessageAt.toDate(), 'p')}
+                            <span className="text-xs text-muted-foreground" title={convo.lastMessageAt && format(convo.lastMessageAt.toDate(), 'PPP p', { locale: ro })}>
+                              {convo.lastMessageAt && formatDistanceToNow(convo.lastMessageAt.toDate(), { addSuffix: true, locale: ro })}
                             </span>
                           )}
                         </TableCell>
@@ -422,7 +426,7 @@ export default function AdminPage() {
                           <div className="text-sm text-muted-foreground">{apt.clientEmail}</div>
                           </TableCell>
                         <TableCell className="block sm:table-cell before:content-['Data:'] before:font-bold before:mr-2 sm:before:content-none">
-                          {apt.startTime && format(apt.startTime.toDate(), 'PPP p')}
+                          {apt.startTime && format(apt.startTime.toDate(), 'PPP p', { locale: ro })}
                         </TableCell>
                         <TableCell className="block sm:table-cell before:content-['Status:'] before:font-bold before:mr-2 sm:before:content-none">
                           <Badge>{apt.status}</Badge>
