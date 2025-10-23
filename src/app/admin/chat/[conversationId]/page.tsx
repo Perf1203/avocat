@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import {
   Dialog,
   DialogContent,
@@ -79,7 +79,17 @@ export default function ChatConversationPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firestore || !user || !message.trim() || !conversationId) return;
+    if (!firestore || !user || !message.trim() || !conversationId || !conversationRef) return;
+
+    // Check if this is the admin's first message
+    const isFirstAdminMessage = !messages?.some((msg: any) => msg.senderId === user.uid);
+    
+    if (isFirstAdminMessage) {
+        const reminderDate = new Date();
+        reminderDate.setMinutes(reminderDate.getMinutes() + 10);
+        // Set the 10-minute reminder when admin first responds
+        setDocumentNonBlocking(conversationRef, { reminderAt: reminderDate }, { merge: true });
+    }
 
     const messagesCol = collection(firestore, 'conversations', conversationId, 'messages');
     addDocumentNonBlocking(messagesCol, {
@@ -89,12 +99,10 @@ export default function ChatConversationPage() {
     });
     
     // Update last message on conversation
-    if (conversationRef) {
-        updateDocumentNonBlocking(conversationRef, {
-            lastMessageAt: serverTimestamp(),
-            lastMessageText: message,
-        });
-    }
+    updateDocumentNonBlocking(conversationRef, {
+        lastMessageAt: serverTimestamp(),
+        lastMessageText: message,
+    });
 
     setMessage('');
   };
@@ -144,6 +152,7 @@ export default function ChatConversationPage() {
     updateDocumentNonBlocking(conversationRef, { 
       paymentStatus: 'paid',
       followUpAt: followUpDate,
+      reminderAt: null // Clear the initial reminder
     });
 
      const messagesCol = collection(firestore, 'conversations', conversationId, 'messages');
@@ -298,5 +307,3 @@ export default function ChatConversationPage() {
     </div>
   );
 }
-
-    
