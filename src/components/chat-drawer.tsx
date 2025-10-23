@@ -118,6 +118,9 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
       if (!firestore || !user) return;
       
       const newConversationRef = doc(collection(firestore, 'conversations'));
+      const reminderDate = new Date();
+      reminderDate.setMinutes(reminderDate.getMinutes() + 10);
+
       const newConvoData = {
             guestId: user.uid,
             adminId: 'default-admin-id',
@@ -128,6 +131,7 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             guestName: '',
             guestEmail: '',
             identificationRequested: false,
+            reminderAt: reminderDate,
         };
         await setDoc(newConversationRef, newConvoData);
         const newConversationId = newConversationRef.id;
@@ -342,3 +346,5 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     </Sheet>
   );
 }
+
+    

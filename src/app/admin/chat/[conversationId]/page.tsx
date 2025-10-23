@@ -138,7 +138,13 @@ export default function ChatConversationPage() {
 
   const handleConfirmPayment = () => {
     if (!conversationRef || !user) return;
-    updateDocumentNonBlocking(conversationRef, { paymentStatus: 'paid' });
+    const followUpDate = new Date();
+    followUpDate.setMinutes(followUpDate.getMinutes() + 150); // 2.5 hours from now
+
+    updateDocumentNonBlocking(conversationRef, { 
+      paymentStatus: 'paid',
+      followUpAt: followUpDate,
+    });
 
      const messagesCol = collection(firestore, 'conversations', conversationId, 'messages');
     addDocumentNonBlocking(messagesCol, {
@@ -292,3 +298,5 @@ export default function ChatConversationPage() {
     </div>
   );
 }
+
+    
