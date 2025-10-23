@@ -90,7 +90,7 @@ export default function ConfigureLandingPage() {
     const [editingStats, setEditingStats] = useState<any>({});
 
     useEffect(() => {
-        if(statsData) {
+        if(statsData && statsData.length > 0) {
             const initialStats: any = {};
             statsData.forEach(stat => {
                 initialStats[stat.id] = { value: stat.value, label: stat.label };
