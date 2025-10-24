@@ -128,6 +128,25 @@ export default function ChatConversationPage() {
 
   const { data: messages, isLoading: isLoadingMessages } = useCollection(messagesQuery);
 
+    // Admin Availability Status Management
+    const adminStatusRef = useMemoFirebase(() => {
+        if (!firestore || !user?.uid) return null;
+        return doc(firestore, 'admin_status', user.uid);
+    }, [firestore, user?.uid]);
+
+    useEffect(() => {
+        if (adminStatusRef) {
+            // Set status to "occupied" when entering a conversation
+            setDocumentNonBlocking(adminStatusRef, { status: 'occupied', lastSeen: serverTimestamp() }, {});
+
+            // Set status back to "available" when leaving the conversation page
+            return () => {
+                setDocumentNonBlocking(adminStatusRef, { status: 'available', lastSeen: serverTimestamp() }, {});
+            };
+        }
+    }, [adminStatusRef]);
+
+
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
@@ -633,3 +652,5 @@ export default function ChatConversationPage() {
     </div>
   );
 }
+
+    

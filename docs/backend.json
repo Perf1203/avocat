@@ -66,7 +66,7 @@
       "type": "object",
       "description": "Represents a single statistic for the landing page.",
       "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the stat." },
+        "id": { "type": "string", "description": "Unique identifier for the statistic." },
         "label": { "type": "string", "description": "The descriptive label for the statistic." },
         "value": { "type": "number", "description": "The numerical value of the statistic." },
         "icon": { "type": "string", "description": "The name of the lucide-react icon to display." },
@@ -291,9 +291,10 @@
         "type": "object",
         "description": "Represents the availability status of a single administrator.",
         "properties": {
-            "isAvailable": {
-                "type": "boolean",
-                "description": "Indicates if the admin is currently available to chat."
+            "status": {
+                "type": "string",
+                "enum": ["available", "occupied"],
+                "description": "Indicates if the admin is available or occupied."
             },
             "lastSeen": {
                 "type": "string",
@@ -301,7 +302,7 @@
                 "description": "Timestamp of the admin's last activity."
             }
         },
-        "required": ["isAvailable", "lastSeen"]
+        "required": ["status", "lastSeen"]
     },
     "ChatConversation": {
       "$schema": "http://json-schema.org/draft-07/schema#",

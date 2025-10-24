@@ -79,8 +79,6 @@ export default function AdminPage() {
   const [availableHours, setAvailableHours] = useState<string[]>([]);
   const [availableDays, setAvailableDays] = useState<number[]>([]);
   const [contractTemplate, setContractTemplate] = useState('');
-  const [isAdminAvailable, setIsAdminAvailable] = useState(false);
-
 
   // Chat settings state
   const [isChatEnabled, setIsChatEnabled] = useState(false);
@@ -104,6 +102,30 @@ export default function AdminPage() {
   
   const isUserAdmin = adminRole?.isAdmin === true;
 
+  // Admin Availability Status Management
+  const adminStatusRef = useMemoFirebase(() => {
+      if (!firestore || !user?.uid) return null;
+      return doc(firestore, 'admin_status', user.uid);
+  }, [firestore, user?.uid]);
+  
+  // Automatically set admin as available when they are on the admin page
+  useEffect(() => {
+      if (isUserAdmin && adminStatusRef) {
+          setDocumentNonBlocking(adminStatusRef, { status: 'available', lastSeen: serverTimestamp() }, {});
+
+          const handleBeforeUnload = () => {
+              deleteDocumentNonBlocking(adminStatusRef);
+          };
+          window.addEventListener('beforeunload', handleBeforeUnload);
+
+          return () => {
+              window.removeEventListener('beforeunload', handleBeforeUnload);
+              deleteDocumentNonBlocking(adminStatusRef);
+          };
+      }
+  }, [isUserAdmin, adminStatusRef]);
+
+
   const registrationSettingsRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'app_settings', 'registration');
@@ -118,36 +140,6 @@ export default function AdminPage() {
 
   const { data: scheduleSettings, isLoading: isLoadingSchedule } = useDoc(scheduleSettingsRef);
   
-  // Admin Availability Status
-  const adminStatusRef = useMemoFirebase(() => {
-      if (!firestore || !user?.uid) return null;
-      return doc(firestore, 'admin_status', user.uid);
-  }, [firestore, user?.uid]);
-
-  const { data: adminStatusData } = useDoc(adminStatusRef);
-  
-  useEffect(() => {
-      setIsAdminAvailable(!!adminStatusData);
-  }, [adminStatusData]);
-  
-  useEffect(() => {
-      const handleBeforeUnload = () => {
-          if (firestore && user?.uid && adminStatusRef) {
-              deleteDocumentNonBlocking(adminStatusRef);
-          }
-      };
-
-      window.addEventListener('beforeunload', handleBeforeUnload);
-
-      return () => {
-          window.removeEventListener('beforeunload', handleBeforeUnload);
-          // Cleanup on unmount (navigation)
-          if (firestore && user?.uid && adminStatusRef) {
-              deleteDocumentNonBlocking(adminStatusRef);
-          }
-      };
-  }, [firestore, user?.uid, adminStatusRef]);
-
   useEffect(() => {
     if (registrationSettings) {
       setIsPublicRegistrationOpen(registrationSettings.isPublicRegistrationOpen);
@@ -201,27 +193,6 @@ export default function AdminPage() {
   const { data: conversations, isLoading: isLoadingConversations } = useCollection(conversationsQuery);
   
   const showLoading = isUserLoading || isLoadingRole;
-
-  const handleAdminAvailabilityToggle = (isAvailable: boolean) => {
-    if (!adminStatusRef) return;
-    setIsAdminAvailable(isAvailable);
-    if (isAvailable) {
-        setDocumentNonBlocking(adminStatusRef, { 
-            isAvailable: true, 
-            lastSeen: serverTimestamp() 
-        }, {});
-         toast({
-            title: 'Status Actualizat',
-            description: 'Acum sunteți vizibil ca "disponibil" pentru vizitatori.',
-        });
-    } else {
-        deleteDocumentNonBlocking(adminStatusRef);
-         toast({
-            title: 'Status Actualizat',
-            description: 'Nu mai sunteți vizibil ca "disponibil".',
-        });
-    }
-  };
 
   const handleChatDelete = (conversationId: string) => {
     if (!firestore) return;
@@ -673,17 +644,6 @@ export default function AdminPage() {
                 <Skeleton className="h-20 w-full" />
               ) : (
                 <>
-                   <div className="flex items-center justify-between space-x-2">
-                        <Label htmlFor="admin-available" className="font-medium flex items-center gap-2">
-                            {isAdminAvailable ? <Wifi className="text-green-500" /> : <WifiOff className="text-red-500"/>}
-                            Setare Status Disponibil
-                        </Label>
-                        <Switch
-                            id="admin-available"
-                            checked={isAdminAvailable}
-                            onCheckedChange={handleAdminAvailabilityToggle}
-                        />
-                    </div>
                   <div className="flex items-center justify-between space-x-2">
                     <Label htmlFor="chat-enabled" className="font-medium">
                       Activează Chat Widget
@@ -866,6 +826,5 @@ export default function AdminPage() {
     </div>
   );
 }
-
 
     
