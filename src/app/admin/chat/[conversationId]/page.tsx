@@ -101,6 +101,8 @@ export default function ChatConversationPage() {
   const [paymentAmount, setPaymentAmount] = useState<number | string>('');
   const [timerExpired, setTimerExpired] = useState(false);
   const [isSignatureDialogOpen, setSignatureDialogOpen] = useState(false);
+  const [showContractDialog, setShowContractDialog] = useState(false);
+  const [contractAdminName, setContractAdminName] = useState('');
 
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -129,6 +131,9 @@ export default function ChatConversationPage() {
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
+    }
+     if (user) {
+      setContractAdminName(user.displayName || 'Administrator');
     }
   }, [user, isUserLoading, router]);
 
@@ -299,13 +304,17 @@ export default function ChatConversationPage() {
   };
 
   const handleSendContract = () => {
-      if (!conversationRef) return;
+      if (!conversationRef || !contractAdminName.trim()) {
+        toast({ variant: 'destructive', title: 'Nume invalid', description: 'Numele administratorului nu poate fi gol.' });
+        return;
+      };
       
       const contractData = {
           sentAt: serverTimestamp(),
           status: 'pending',
           guestSignature: null,
           adminSignature: null,
+          adminName: contractAdminName,
           text: settings?.contractTemplate || 'Prestatorul se obligă să furnizeze Beneficiarului servicii de consultanță juridică online prin intermediul platformei de chat, conform termenilor și condițiilor agreate în conversație.',
       };
 
@@ -323,6 +332,7 @@ export default function ChatConversationPage() {
           title: 'Contract Trimis',
           description: 'Contractul a fost trimis vizitatorului pentru semnare.'
       });
+      setShowContractDialog(false);
   };
 
   const handleSignContract = (signatureDataUrl: string) => {
@@ -345,7 +355,7 @@ export default function ChatConversationPage() {
   
    const handleDownloadContract = () => {
     if (!conversation || !conversation.contract) return;
-    generateContract(conversation, websiteName, user?.displayName || "Administrator");
+    generateContract(conversation, websiteName);
   };
 
   if (isUserLoading || isLoadingConversation) {
@@ -414,7 +424,7 @@ export default function ChatConversationPage() {
                         <Calendar className="mr-2 h-4 w-4" />
                         <span>Solicită Programare</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleSendContract}>
+                    <DropdownMenuItem onClick={() => setShowContractDialog(true)}>
                         <FileSignature className="mr-2 h-4 w-4" />
                         <span>Trimite Contract</span>
                     </DropdownMenuItem>
@@ -581,6 +591,29 @@ export default function ChatConversationPage() {
             <DialogFooter>
                 <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>Anulează</Button>
                 <Button onClick={handleRequestPayment} disabled={!paymentLink.trim() || !paymentAmount}>Trimite Solicitarea</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+       <Dialog open={showContractDialog} onOpenChange={setShowContractDialog}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Trimite Contract</DialogTitle>
+                <DialogDescription>
+                    Confirmați numele reprezentantului pentru acest contract. Acesta va fi afișat în documentul PDF.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 py-4">
+                <Label htmlFor="admin-name">Nume Reprezentant (Prestator)</Label>
+                <Input 
+                    id="admin-name"
+                    value={contractAdminName}
+                    onChange={(e) => setContractAdminName(e.target.value)}
+                    placeholder="Numele dvs. complet"
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setShowContractDialog(false)}>Anulează</Button>
+                <Button onClick={handleSendContract} disabled={!contractAdminName.trim()}>Trimite Contractul</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>

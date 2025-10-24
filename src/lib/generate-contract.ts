@@ -26,10 +26,11 @@ const formatDate = (date: any) => {
     return format(dateObj, 'PPP', { locale: ro });
 };
 
-export const generateContract = (conversation: any, websiteName: string, adminName: string) => {
+export const generateContract = (conversation: any, websiteName: string) => {
     const doc = new jsPDF();
     const guestName = conversation.guestName || 'Vizitator';
     const contract = conversation.contract;
+    const adminName = contract?.adminName || 'Administrator';
 
     // --- Colors & Fonts ---
     const primaryColor = '#2C5282';
