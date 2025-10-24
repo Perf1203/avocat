@@ -46,6 +46,7 @@ import * as LucideIcons from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { PracticeAreaDetailDialog } from '@/components/practice-area-detail-dialog';
 
 
 // Default Content
@@ -102,14 +103,14 @@ const AreaIcon = ({ name = 'Gavel' }: { name?: string }) => {
 };
 
 
-const AnimatedSection = ({ children, className }: { children: React.ReactNode, className?: string }) => {
+const AnimatedSection = ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
     const { ref, inView } = useInView({
         triggerOnce: false,
         threshold: 0.1,
     });
 
     return (
-        <div ref={ref} className={cn("transition-all duration-1000", inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10', className)}>
+        <div ref={ref} className={cn("transition-all duration-1000", inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10', className)} {...props}>
             {children}
         </div>
     );
@@ -148,6 +149,9 @@ export default function Home() {
   const { firestore } = useFirebase();
   const { user } = useUser();
   const { toast } = useToast();
+
+  const [isAreaDetailOpen, setIsAreaDetailOpen] = useState(false);
+  const [selectedArea, setSelectedArea] = useState<any | null>(null);
 
   const adminRoleRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -192,6 +196,11 @@ export default function Home() {
   const isLoading = isContentLoading || isLoadingRole || areStatsLoading;
   
   const sortedStats = statsData ? [...statsData].sort((a, b) => a.order - b.order) : [];
+  
+  const handleReadMore = (area: any) => {
+    setSelectedArea(area);
+    setIsAreaDetailOpen(true);
+  };
 
   return (
     <>
@@ -340,17 +349,29 @@ export default function Home() {
                     <div key={i} className="text-center p-4"><Skeleton className="h-48 w-full"/></div>
                 ))
               ) : Array.isArray(practiceAreasData) && practiceAreasData.length > 0 ? (
-                practiceAreasData.map((area: any, index) => (
-                    <AnimatedSection key={area.id} style={{ animationDelay: `${index * 150}ms` }}>
-                        <div className="group text-center p-8 rounded-lg bg-background shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-                            <div className="flex justify-center mb-5"><AreaIcon name={area.icon} /></div>
-                            <h3 className="font-headline text-xl font-semibold text-primary">{area.title}</h3>
-                            <p className="mt-2 text-muted-foreground">
-                                {area.description}
-                            </p>
-                        </div>
-                    </AnimatedSection>
-                ))
+                practiceAreasData.map((area: any, index) => {
+                    const needsTruncation = area.description.length > 150;
+                    const truncatedDescription = needsTruncation 
+                        ? `${area.description.substring(0, 150)}...` 
+                        : area.description;
+
+                    return (
+                        <AnimatedSection key={area.id} style={{ animationDelay: `${index * 150}ms` }}>
+                            <div className="group text-center p-8 rounded-lg bg-background shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 h-full flex flex-col">
+                                <div className="flex justify-center mb-5"><AreaIcon name={area.icon} /></div>
+                                <h3 className="font-headline text-xl font-semibold text-primary">{area.title}</h3>
+                                <p className="mt-2 text-muted-foreground break-words flex-grow">
+                                    {truncatedDescription}
+                                </p>
+                                {needsTruncation && (
+                                    <Button variant="link" className="p-0 mt-2 text-primary" onClick={() => handleReadMore(area)}>
+                                        Citește mai mult
+                                    </Button>
+                                )}
+                            </div>
+                        </AnimatedSection>
+                    );
+                })
               ) : (
                 <p className="col-span-full text-center text-muted-foreground">Nu există servicii adăugate.</p>
               )}
@@ -539,6 +560,11 @@ export default function Home() {
           </AnimatedSection>
         </section>
       </div>
+      <PracticeAreaDetailDialog
+        isOpen={isAreaDetailOpen}
+        onOpenChange={setIsAreaDetailOpen}
+        area={selectedArea}
+      />
     </>
   );
 }
