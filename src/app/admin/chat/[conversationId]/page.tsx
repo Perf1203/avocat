@@ -34,6 +34,8 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { generateBill } from '@/lib/generate-bill';
 import { generateContract } from '@/lib/generate-contract';
+import { SignatureDialog } from '@/components/signature-dialog';
+import Image from 'next/image';
 
 // CountdownTimer Component
 const CountdownTimer = ({ targetDate, onExpire }: { targetDate: Date | null, onExpire: () => void }) => {
@@ -98,6 +100,8 @@ export default function ChatConversationPage() {
   const [paymentLink, setPaymentLink] = useState('');
   const [paymentAmount, setPaymentAmount] = useState<number | string>('');
   const [timerExpired, setTimerExpired] = useState(false);
+  const [isSignatureDialogOpen, setSignatureDialogOpen] = useState(false);
+
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -320,11 +324,11 @@ export default function ChatConversationPage() {
       });
   };
 
-  const handleSignContract = () => {
+  const handleSignContract = (signatureDataUrl: string) => {
       if (!conversationRef || !user || !conversation.contract) return;
 
       const signatureData: { [key: string]: any } = {
-          'contract.adminSignature': user.displayName || 'Administrator',
+          'contract.adminSignature': signatureDataUrl,
           'contract.adminSignedAt': new Date(),
       };
       
@@ -335,6 +339,7 @@ export default function ChatConversationPage() {
       updateDocumentNonBlocking(conversationRef, signatureData);
 
       toast({ title: 'Contract Semnat', description: 'Ați semnat contractul.' });
+      setSignatureDialogOpen(false);
   };
   
    const handleDownloadContract = () => {
@@ -418,6 +423,12 @@ export default function ChatConversationPage() {
                             <span>Descarcă Factura</span>
                         </DropdownMenuItem>
                     )}
+                     {isContractSigned && (
+                        <DropdownMenuItem onClick={handleDownloadContract}>
+                            <FileDown className="mr-2 h-4 w-4" />
+                            <span>Descarcă Contractul</span>
+                        </DropdownMenuItem>
+                    )}
                 </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -464,15 +475,23 @@ export default function ChatConversationPage() {
                                         <Button size="sm" variant="secondary" onClick={handleDownloadContract}><FileDown className="mr-2"/>Descarcă PDF</Button>
                                     </div>
                                 ) : canAdminSign ? (
-                                    <div className='text-center'>
-                                        <p className="text-sm text-amber-600 mb-3">{contract.guestSignature ? `Așteaptă semnătura dvs.` : 'Așteaptă semnăturile'}</p>
-                                        <Button size="sm" onClick={handleSignContract}>Semnează Contractul</Button>
+                                    <div className='text-center space-y-3'>
+                                        <p className="text-sm text-amber-600">{contract.guestSignature ? `Așteaptă semnătura dvs.` : 'Așteaptă semnăturile'}</p>
+                                        {contract.guestSignature && <div className="p-2 border bg-white rounded-md max-w-xs mx-auto"><Image src={contract.guestSignature} alt="Semnatura Client" width={150} height={75} /></div>}
+                                        <Button size="sm" onClick={() => setSignatureDialogOpen(true)}>Semnează Contractul</Button>
                                     </div>
                                 ) : (
                                     <p className="text-sm text-muted-foreground">Așteaptă semnătura clientului.</p>
                                 )}
                             </div>
                           );
+                        }
+                         if (msg.systemMessageType === 'payment_request' && msg.paymentLink) {
+                            return (
+                                <div key={msg.id} className="text-center text-xs text-muted-foreground my-4">
+                                    --- {`Solicitare de plată (${msg.paymentAmount}€) trimisă: ${msg.paymentLink}`} ---
+                                </div>
+                            );
                         }
                         return (
                             <div key={msg.id} className="text-center text-xs text-muted-foreground my-4">
@@ -561,6 +580,13 @@ export default function ChatConversationPage() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+      <SignatureDialog
+        isOpen={isSignatureDialogOpen}
+        onOpenChange={setSignatureDialogOpen}
+        onSave={handleSignContract}
+      />
     </div>
   );
 }
+
+    

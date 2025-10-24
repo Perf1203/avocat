@@ -19,6 +19,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { generateBill } from '@/lib/generate-bill';
 import { generateContract } from '@/lib/generate-contract';
+import { SignatureDialog } from './signature-dialog';
 
 
 interface ChatDrawerProps {
@@ -39,6 +40,7 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   const [showIdentification, setShowIdentification] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [isSignatureDialogOpen, setSignatureDialogOpen] = useState(false);
   
   const [qrCode, setQrCode] = useState<string | null>(null);
 
@@ -215,11 +217,11 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     generateBill(conversation, websiteName);
   };
   
-    const handleSignContract = () => {
+  const handleSignContract = (signatureDataUrl: string) => {
       if (!conversationRef || !conversation.contract) return;
 
-      const signatureData = {
-          'contract.guestSignature': conversation.guestName || 'Vizitator',
+      const signatureData: { [key: string]: any } = {
+          'contract.guestSignature': signatureDataUrl,
           'contract.guestSignedAt': new Date(),
       };
       
@@ -230,6 +232,7 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
       updateDocumentNonBlocking(conversationRef, signatureData);
 
       toast({ title: 'Contract Semnat', description: 'Ați semnat contractul.' });
+      setSignatureDialogOpen(false);
   };
   
   const handleDownloadContract = () => {
@@ -323,14 +326,19 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
                             <div key={msg.id} className="p-4 my-2 rounded-lg border bg-blue-100 dark:bg-blue-900/50 text-center">
                                 <h4 className="font-semibold flex items-center justify-center gap-2 mb-3"><FileSignature /> Contract pentru Semnare</h4>
                                 {isContractSigned ? (
-                                    <div className='text-center'>
-                                        <p className="text-sm text-green-600 font-medium mb-3">✓ Semnat de ambele părți</p>
+                                    <div className='text-center space-y-3'>
+                                        <p className="text-sm text-green-600 font-medium">✓ Semnat de ambele părți</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="p-2 border bg-white rounded-md"><span className="text-xs text-muted-foreground">Client</span><Image src={contract.guestSignature} alt="Semnatura Client" width={150} height={75} /></div>
+                                          <div className="p-2 border bg-white rounded-md"><span className="text-xs text-muted-foreground">Admin</span><Image src={contract.adminSignature} alt="Semnatura Admin" width={150} height={75} /></div>
+                                        </div>
                                         <Button size="sm" variant="secondary" onClick={handleDownloadContract}><FileDown className="mr-2"/>Descarcă PDF</Button>
                                     </div>
                                 ) : canGuestSign ? (
-                                    <div className='text-center'>
-                                        <p className="text-sm text-amber-600 mb-3">{contract.adminSignature ? 'Așteaptă semnătura dvs.' : 'Așteaptă semnăturile'}</p>
-                                        <Button size="sm" onClick={handleSignContract}>Semnează Contractul</Button>
+                                    <div className='text-center space-y-3'>
+                                        <p className="text-sm text-amber-600">{contract.adminSignature ? 'Așteaptă semnătura dvs.' : 'Așteaptă semnăturile'}</p>
+                                        {contract.adminSignature && <div className="p-2 border bg-white rounded-md max-w-xs mx-auto"><Image src={contract.adminSignature} alt="Semnatura Admin" width={150} height={75} /></div>}
+                                        <Button size="sm" onClick={() => setSignatureDialogOpen(true)}>Semnează Contractul</Button>
                                     </div>
                                 ) : (
                                      <p className="text-sm text-muted-foreground">Așteaptă semnătura administratorului.</p>
@@ -421,7 +429,14 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             </Button>
           </form>
         </div>
+        <SignatureDialog
+            isOpen={isSignatureDialogOpen}
+            onOpenChange={setSignatureDialogOpen}
+            onSave={handleSignContract}
+        />
       </SheetContent>
     </Sheet>
   );
 }
+
+    
