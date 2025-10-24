@@ -12,7 +12,7 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { useFirebase, useUser, useDoc, useMemoFirebase, useAuth } from '@/firebase';
+import { useFirebase, useUser, useDoc, useMemoFirebase, useAuth, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from "@/hooks/use-toast";
 
 const navItems = [
@@ -46,6 +46,10 @@ export function Header() {
 
 
   const handleLogout = () => {
+    if (firestore && user?.uid) {
+        const adminStatusRef = doc(firestore, 'admin_status', user.uid);
+        deleteDocumentNonBlocking(adminStatusRef);
+    }
     signOut(auth).then(() => {
       toast({
         title: 'Deconectare reușită',
@@ -174,3 +178,5 @@ export function Header() {
     </header>
   );
 }
+
+    

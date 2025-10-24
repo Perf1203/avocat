@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { useFirebase, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy, doc, arrayUnion, arrayRemove, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, arrayUnion, arrayRemove, where, serverTimestamp } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import {
   Table,
@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate, Newspaper, MoreVertical, AlertCircle, FileSignature, Cog } from 'lucide-react';
+import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate, Newspaper, MoreVertical, AlertCircle, FileSignature, Cog, Wifi, WifiOff } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,12 +79,14 @@ export default function AdminPage() {
   const [availableHours, setAvailableHours] = useState<string[]>([]);
   const [availableDays, setAvailableDays] = useState<number[]>([]);
   const [contractTemplate, setContractTemplate] = useState('');
+  const [isAdminAvailable, setIsAdminAvailable] = useState(false);
+
 
   // Chat settings state
   const [isChatEnabled, setIsChatEnabled] = useState(false);
   const [chatType, setChatType] = useState('whatsapp');
   const [whatsAppNumber, setWhatsAppNumber] = useState('');
-  const [showChatOnlyToAdmin, setShowChatOnlyToAdmin] = useState(false);
+  const [showChatOnlyIfAdminIsAvailable, setShowChatOnlyIfAdminIsAvailable] = useState(false);
 
 
   useEffect(() => {
@@ -115,6 +117,36 @@ export default function AdminPage() {
   }, [firestore]);
 
   const { data: scheduleSettings, isLoading: isLoadingSchedule } = useDoc(scheduleSettingsRef);
+  
+  // Admin Availability Status
+  const adminStatusRef = useMemoFirebase(() => {
+      if (!firestore || !user?.uid) return null;
+      return doc(firestore, 'admin_status', user.uid);
+  }, [firestore, user?.uid]);
+
+  const { data: adminStatusData } = useDoc(adminStatusRef);
+  
+  useEffect(() => {
+      setIsAdminAvailable(!!adminStatusData);
+  }, [adminStatusData]);
+  
+  useEffect(() => {
+      const handleBeforeUnload = () => {
+          if (firestore && user?.uid && adminStatusRef) {
+              deleteDocumentNonBlocking(adminStatusRef);
+          }
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+          window.removeEventListener('beforeunload', handleBeforeUnload);
+          // Cleanup on unmount (navigation)
+          if (firestore && user?.uid && adminStatusRef) {
+              deleteDocumentNonBlocking(adminStatusRef);
+          }
+      };
+  }, [firestore, user?.uid, adminStatusRef]);
 
   useEffect(() => {
     if (registrationSettings) {
@@ -135,7 +167,7 @@ export default function AdminPage() {
       setIsChatEnabled(scheduleSettings.isChatEnabled ?? false);
       setChatType(scheduleSettings.chatType ?? 'whatsapp');
       setWhatsAppNumber(scheduleSettings.whatsAppNumber ?? '');
-      setShowChatOnlyToAdmin(scheduleSettings.showChatOnlyToAdmin ?? false);
+      setShowChatOnlyIfAdminIsAvailable(scheduleSettings.showChatOnlyIfAdminIsAvailable ?? false);
       setContractTemplate(scheduleSettings.contractTemplate || 'Prestatorul se obligă să furnizeze Beneficiarului servicii de consultanță juridică online prin intermediul platformei de chat, conform termenilor și condițiilor agreate în conversație.');
     }
   }, [scheduleSettings]);
@@ -169,6 +201,27 @@ export default function AdminPage() {
   const { data: conversations, isLoading: isLoadingConversations } = useCollection(conversationsQuery);
   
   const showLoading = isUserLoading || isLoadingRole;
+
+  const handleAdminAvailabilityToggle = (isAvailable: boolean) => {
+    if (!adminStatusRef) return;
+    setIsAdminAvailable(isAvailable);
+    if (isAvailable) {
+        setDocumentNonBlocking(adminStatusRef, { 
+            isAvailable: true, 
+            lastSeen: serverTimestamp() 
+        }, {});
+         toast({
+            title: 'Status Actualizat',
+            description: 'Acum sunteți vizibil ca "disponibil" pentru vizitatori.',
+        });
+    } else {
+        deleteDocumentNonBlocking(adminStatusRef);
+         toast({
+            title: 'Status Actualizat',
+            description: 'Nu mai sunteți vizibil ca "disponibil".',
+        });
+    }
+  };
 
   const handleChatDelete = (conversationId: string) => {
     if (!firestore) return;
@@ -620,6 +673,17 @@ export default function AdminPage() {
                 <Skeleton className="h-20 w-full" />
               ) : (
                 <>
+                   <div className="flex items-center justify-between space-x-2">
+                        <Label htmlFor="admin-available" className="font-medium flex items-center gap-2">
+                            {isAdminAvailable ? <Wifi className="text-green-500" /> : <WifiOff className="text-red-500"/>}
+                            Setare Status Disponibil
+                        </Label>
+                        <Switch
+                            id="admin-available"
+                            checked={isAdminAvailable}
+                            onCheckedChange={handleAdminAvailabilityToggle}
+                        />
+                    </div>
                   <div className="flex items-center justify-between space-x-2">
                     <Label htmlFor="chat-enabled" className="font-medium">
                       Activează Chat Widget
@@ -634,15 +698,15 @@ export default function AdminPage() {
                     />
                   </div>
                   <div className="flex items-center justify-between space-x-2">
-                    <Label htmlFor="show-chat-only-to-admin" className="font-medium">
-                        Arată chat-ul doar adminilor logați
+                    <Label htmlFor="show-chat-only-if-admin-is-available" className="flex-1">
+                        Afișează chatul dacă vreunul dintre administratori este conectat
                     </Label>
                     <Switch
-                      id="show-chat-only-to-admin"
-                      checked={showChatOnlyToAdmin}
+                      id="show-chat-only-if-admin-is-available"
+                      checked={showChatOnlyIfAdminIsAvailable}
                       onCheckedChange={(checked) => {
-                        setShowChatOnlyToAdmin(checked);
-                        handleChatSettingsUpdate('showChatOnlyToAdmin', checked);
+                        setShowChatOnlyIfAdminIsAvailable(checked);
+                        handleChatSettingsUpdate('showChatOnlyIfAdminIsAvailable', checked);
                       }}
                     />
                   </div>
@@ -803,3 +867,5 @@ export default function AdminPage() {
   );
 }
 
+
+    

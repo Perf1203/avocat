@@ -5,8 +5,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { MessageSquare, X } from 'lucide-react';
 import { Button } from './ui/button';
-import { useFirebase, useDoc, useMemoFirebase, useAuth, useUser } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirebase, useDoc, useMemoFirebase, useAuth, useUser, useCollection } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import { signInAnonymously, User } from 'firebase/auth';
 import { ChatDrawer } from './chat-drawer';
 import { cn } from '@/lib/utils';
@@ -47,6 +47,13 @@ export function ChatWidget() {
 
   const { data: conversation, isLoading: isLoadingConversation } = useDoc(conversationRef);
   const isBlocked = conversation?.isBlocked === true;
+  
+  const adminStatusCollectionRef = useMemoFirebase(() => {
+    return firestore ? collection(firestore, 'admin_status') : null;
+  }, [firestore]);
+
+  const { data: availableAdmins, isLoading: isLoadingAdmins } = useCollection(adminStatusCollectionRef);
+  const isAdminAvailable = availableAdmins ? availableAdmins.length > 0 : false;
 
   const openChat = useCallback((currentUser: User | null) => {
     if (!settings || !currentUser) return;
@@ -83,18 +90,14 @@ export function ChatWidget() {
   };
 
   const shouldShowWidget = () => {
-    if (isLoadingSettings || !settings?.isChatEnabled || isBlocked || isLoadingConversation) {
-        return false;
-    }
-    if (settings.showChatOnlyToAdmin) {
-        // Show only if user is an admin
-        return isUserAdmin;
-    }
-    // Don't show to admin if the setting to show only to admin is off
-    if (isUserAdmin) {
+    if (isUserAdmin || isLoadingSettings || !settings?.isChatEnabled || isBlocked || isLoadingConversation || isLoadingAdmins) {
       return false;
     }
-
+    
+    if (settings.showChatOnlyIfAdminIsAvailable) {
+        return isAdminAvailable;
+    }
+    
     return true;
 };
 
@@ -126,3 +129,6 @@ export function ChatWidget() {
   );
 }
 
+
+
+    

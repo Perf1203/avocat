@@ -266,9 +266,9 @@
           "type": "boolean",
           "description": "Globally enables or disables the chat widget."
         },
-        "showChatOnlyToAdmin": {
+        "showChatOnlyIfAdminIsAvailable": {
           "type": "boolean",
-          "description": "If true, the chat widget is only shown to logged-in administrators."
+          "description": "If true, the chat widget is only shown to visitors if an admin has set their status to available."
         },
         "chatType": {
           "type": "string",
@@ -284,6 +284,24 @@
             "description": "The default template text for service contracts."
         }
       }
+    },
+    "AdminStatus": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "AdminStatus",
+        "type": "object",
+        "description": "Represents the availability status of a single administrator.",
+        "properties": {
+            "isAvailable": {
+                "type": "boolean",
+                "description": "Indicates if the admin is currently available to chat."
+            },
+            "lastSeen": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Timestamp of the admin's last activity."
+            }
+        },
+        "required": ["isAvailable", "lastSeen"]
     },
     "ChatConversation": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -619,6 +637,22 @@
           ]
         }
       },
+       {
+        "path": "/admin_status/{userId}",
+        "definition": {
+          "entityName": "AdminStatus",
+          "schema": {
+            "$ref": "#/backend/entities/AdminStatus"
+          },
+          "description": "Stores the availability status of a single admin. A document's existence implies the admin is available.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the admin user."
+            }
+          ]
+        }
+      },
       {
         "path": "/conversations/{conversationId}",
         "definition": {
@@ -672,6 +706,8 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to accommodate the application's requirements for appointment scheduling, landing page content management, and dynamic content suggestions. It prioritizes authorization independence and supports secure list operations (QAPs). \n\n1.  **Authorization Independence:** Access to appointments is controlled through path-based ownership. Each client's appointments are stored under their own document (`/clients/{clientId}/appointments/{appointmentId}`). Administrative access is granted via the `/roles_admin/{uid}` collection.  This eliminates the need for `get()` calls in security rules, ensuring atomic operations.\n\n2.  **Structural Segregation:**  `ConsultationPrice`, `LandingPageContent`, `AppSettings`, `Testimonial`, `PracticeArea`, and `Stat` are placed in separate collections with distinct security profiles. This ensures that data with different access needs is not mixed, simplifying security rules.\n\n3.  **Access Modeling:**  Path-based ownership is employed for `Client` and `Appointment` data. The `roles_admin` collection uses existence-based global roles.\n\n4.  **QAPs (Rules Are Not Filters):** Segregating data based on ownership allows for efficient and secure list operations. For instance, a client can only list appointments under their `clientId`, and admins can list all appointments.\n\nDenormalization is not explicitly required in this design because path-based ownership provides sufficient authorization context without needing to copy data. If, in the future, more complex authorization schemes are introduced (e.g., sharing appointments with other users), denormalization of a `members` map into the `/clients/{clientId}/appointments/{appointmentId}` collection would be necessary."
+    "reasoning": "The Firestore structure is designed to accommodate the application's requirements for appointment scheduling, landing page content management, and dynamic content suggestions. It prioritizes authorization independence and supports secure list operations (QAPs). \n\n1.  **Authorization Independence:** Access to appointments is controlled through path-based ownership. Each client's appointments are stored under their own document (`/clients/{clientId}/appointments/{appointmentId}`). Administrative access is granted via the `/roles_admin/{uid}` collection.  This eliminates the need for `get()` calls in security rules, ensuring atomic operations.\n\n2.  **Structural Segregation:**  `ConsultationPrice`, `LandingPageContent`, `AppSettings`, `Testimonial`, `PracticeArea`, `Stat`, and `AdminStatus` are placed in separate collections with distinct security profiles. This ensures that data with different access needs is not mixed, simplifying security rules.\n\n3.  **Access Modeling:**  Path-based ownership is employed for `Client` and `Appointment` data. The `roles_admin` collection uses existence-based global roles. `AdminStatus` uses document existence to signal availability.\n\n4.  **QAPs (Rules Are Not Filters):** Segregating data based on ownership allows for efficient and secure list operations. For instance, a client can only list appointments under their `clientId`, and admins can list all appointments.\n\nDenormalization is not explicitly required in this design because path-based ownership provides sufficient authorization context without needing to copy data. If, in the future, more complex authorization schemes are introduced (e.g., sharing appointments with other users), denormalization of a `members` map into the `/clients/{clientId}/appointments/{appointmentId}` collection would be necessary."
   }
 }
+
+    
