@@ -1,3 +1,4 @@
+
 'use client';
 
 import jsPDF from 'jspdf';
@@ -58,25 +59,53 @@ export const generateBill = (conversation: any, websiteName: string) => {
   // --- Colors from Template ---
   const primaryColor = '#2C5282'; 
   const secondaryColor = '#7ba8c1';
+  const lightBlue = '#a8cfe0';
   const textColor = '#2D3748';
   const midGray = '#E2E8F0';
   const darkGray = '#4A5568';
   
+  const pageWidth = doc.internal.pageSize.getWidth();
 
-  // --- Header with Wave ---
+  // --- Header with Waves ---
+    // Wave 1 (Darkest)
     doc.setFillColor(primaryColor);
     doc.path([
         { op: 'm', c: [0, 0] },
-        { op: 'l', c: [doc.internal.pageSize.getWidth(), 0] },
-        { op: 'l', c: [doc.internal.pageSize.getWidth(), 60] },
-        { op: 'l', c: [0, 80] },
+        { op: 'l', c: [pageWidth, 0] },
+        { op: 'l', c: [pageWidth, 40] },
+        { op: 'c', c: [pageWidth * 0.75, 70, pageWidth * 0.25, 20, 0, 50] },
         { op: 'l', c: [0, 0] },
-        { op: 'f'}
+        { op: 'f' }
+    ]).stroke();
+
+    // Wave 2 (Medium)
+    doc.setFillColor(secondaryColor);
+    doc.path([
+        { op: 'm', c: [0, 0] },
+        { op: 'l', c: [pageWidth, 0] },
+        { op: 'l', c: [pageWidth, 30] },
+        { op: 'c', c: [pageWidth * 0.8, 60, pageWidth * 0.3, 10, 0, 40] },
+        { op: 'l', c: [0, 0] },
+        { op: 'f' }
+    ]).stroke();
+    
+    // Wave 3 (Lightest)
+    doc.setFillColor(lightBlue);
+    doc.path([
+        { op: 'm', c: [0, 0] },
+        { op: 'l', c: [pageWidth, 0] },
+        { op: 'l', c: [pageWidth, 20] },
+        { op: 'c', c: [pageWidth * 0.7, 45, pageWidth * 0.4, 5, 0, 25] },
+        { op: 'l', c: [0, 0] },
+        { op: 'f' }
     ]).stroke();
 
   // --- Header Content ---
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(28);
+  // Add a subtle shadow for better readability
+  doc.setTextColor('#000000');
+  doc.text(normalizeText('FACTURĂ'), 21, 36, { opacity: 0.1 });
   doc.setTextColor('#FFFFFF');
   doc.text(normalizeText('FACTURĂ'), 20, 35);
   
