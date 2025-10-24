@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useCallback, useEffect } from 'react';
@@ -81,7 +82,24 @@ export function ChatWidget() {
     return <MessageSquare className="h-6 w-6" />;
   };
 
-  if (isLoadingSettings || !settings?.isChatEnabled || isBlocked || isLoadingConversation || isUserAdmin) {
+  const shouldShowWidget = () => {
+    if (isLoadingSettings || !settings?.isChatEnabled || isBlocked || isLoadingConversation) {
+        return false;
+    }
+    if (settings.showChatOnlyToAdmin) {
+        // Show only if user is an admin
+        return isUserAdmin;
+    }
+    // Don't show to admin if the setting to show only to admin is off
+    if (isUserAdmin) {
+      return false;
+    }
+
+    return true;
+};
+
+
+  if (!shouldShowWidget()) {
     return null;
   }
 
@@ -107,3 +125,4 @@ export function ChatWidget() {
     </>
   );
 }
+

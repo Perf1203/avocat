@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -83,6 +84,8 @@ export default function AdminPage() {
   const [isChatEnabled, setIsChatEnabled] = useState(false);
   const [chatType, setChatType] = useState('whatsapp');
   const [whatsAppNumber, setWhatsAppNumber] = useState('');
+  const [showChatOnlyToAdmin, setShowChatOnlyToAdmin] = useState(false);
+
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -132,6 +135,7 @@ export default function AdminPage() {
       setIsChatEnabled(scheduleSettings.isChatEnabled ?? false);
       setChatType(scheduleSettings.chatType ?? 'whatsapp');
       setWhatsAppNumber(scheduleSettings.whatsAppNumber ?? '');
+      setShowChatOnlyToAdmin(scheduleSettings.showChatOnlyToAdmin ?? false);
       setContractTemplate(scheduleSettings.contractTemplate || 'Prestatorul se obligă să furnizeze Beneficiarului servicii de consultanță juridică online prin intermediul platformei de chat, conform termenilor și condițiilor agreate în conversație.');
     }
   }, [scheduleSettings]);
@@ -624,6 +628,19 @@ export default function AdminPage() {
                       }}
                     />
                   </div>
+                  <div className="flex items-center justify-between space-x-2">
+                    <Label htmlFor="show-chat-only-to-admin" className="font-medium">
+                        Arată chat-ul doar adminilor logați
+                    </Label>
+                    <Switch
+                      id="show-chat-only-to-admin"
+                      checked={showChatOnlyToAdmin}
+                      onCheckedChange={(checked) => {
+                        setShowChatOnlyToAdmin(checked);
+                        handleChatSettingsUpdate('showChatOnlyToAdmin', checked);
+                      }}
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label>Tip Chat</Label>
                     <RadioGroup
@@ -780,3 +797,4 @@ export default function AdminPage() {
     </div>
   );
 }
+

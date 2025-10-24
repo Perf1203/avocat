@@ -266,6 +266,10 @@
           "type": "boolean",
           "description": "Globally enables or disables the chat widget."
         },
+        "showChatOnlyToAdmin": {
+          "type": "boolean",
+          "description": "If true, the chat widget is only shown to logged-in administrators."
+        },
         "chatType": {
           "type": "string",
           "enum": ["whatsapp", "internal"],
