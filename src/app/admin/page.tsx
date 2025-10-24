@@ -111,7 +111,7 @@ export default function AdminPage() {
   // Automatically set admin as available when they are on the admin page
   useEffect(() => {
       if (isUserAdmin && adminStatusRef) {
-          setDocumentNonBlocking(adminStatusRef, { status: 'available', lastSeen: serverTimestamp() }, {});
+          setDocumentNonBlocking(adminStatusRef, { status: 'available', lastSeen: serverTimestamp() }, { merge: true });
 
           const handleBeforeUnload = () => {
               deleteDocumentNonBlocking(adminStatusRef);
@@ -374,7 +374,7 @@ export default function AdminPage() {
                                 <CircleUserRound className="text-muted-foreground"/>
                                 <div className="flex flex-col">
                                     <span>{convo.guestName || `Vizitator`}</span>
-                                    <span className="text-xs text-muted-foreground">{convo.guestEmail || convo.guestId.substring(0,8)+'...'}</span>
+                                    <span className="text-xs text-muted-foreground">{convo.guestEmail || (convo.guestId ? convo.guestId.substring(0,8)+'...' : 'ID Indisponibil')}</span>
                                 </div>
                             </div>
                         </TableCell>
@@ -826,5 +826,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
