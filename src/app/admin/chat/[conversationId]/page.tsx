@@ -424,7 +424,7 @@ export default function ChatConversationPage() {
                             <span>Descarcă Factura</span>
                         </DropdownMenuItem>
                     )}
-                     {isContractSigned && (
+                     {contract && (
                         <DropdownMenuItem onClick={handleDownloadContract}>
                             <FileDown className="mr-2 h-4 w-4" />
                             <span>Descarcă Contractul</span>
@@ -475,14 +475,17 @@ export default function ChatConversationPage() {
                                         <p className="text-sm text-green-600 font-medium mb-3">✓ Semnat de ambele părți</p>
                                         <Button size="sm" variant="secondary" onClick={handleDownloadContract}><FileDown className="mr-2"/>Descarcă PDF</Button>
                                     </div>
-                                ) : canAdminSign ? (
+                                ) : (
                                     <div className='text-center space-y-3'>
                                         <p className="text-sm text-amber-600">{contract.guestSignature ? `Așteaptă semnătura dvs.` : 'Așteaptă semnăturile'}</p>
                                         {contract.guestSignature && <div className="p-2 border bg-white rounded-md max-w-xs mx-auto"><Image src={contract.guestSignature} alt="Semnatura Client" width={150} height={75} /></div>}
-                                        <Button size="sm" onClick={() => setSignatureDialogOpen(true)}>Semnează Contractul</Button>
+                                        {canAdminSign ? (
+                                          <Button size="sm" onClick={() => setSignatureDialogOpen(true)}>Semnează Contractul</Button>
+                                        ) : (
+                                           <p className="text-sm text-muted-foreground">Ați semnat deja.</p>
+                                        )}
+                                        {contract.sentAt && <Button size="sm" variant="secondary" onClick={handleDownloadContract}><FileDown className="mr-2"/>Descarcă PDF</Button>}
                                     </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">Așteaptă semnătura clientului.</p>
                                 )}
                             </div>
                           );
