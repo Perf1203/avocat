@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate, Newspaper, MoreVertical, AlertCircle, FileSignature } from 'lucide-react';
+import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate, Newspaper, MoreVertical, AlertCircle, FileSignature, Cog } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -305,9 +305,14 @@ export default function AdminPage() {
   return (
     <div className="container py-12">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <h1 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl">
-          Panou de Administrare
-        </h1>
+        <div className="flex items-center gap-4">
+          <h1 className="font-headline text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+            Panou de Administrare
+          </h1>
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/admin/profile"><Cog /></Link>
+          </Button>
+        </div>
         <Button asChild className="w-full sm:w-auto">
           <Link href="/">Înapoi la Acasă</Link>
         </Button>
