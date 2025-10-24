@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth, useUser } from '@/firebase';
-import { updateProfile, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updateEmail } from 'firebase/auth';
+import { updateProfile, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail } from 'firebase/auth';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -99,8 +99,11 @@ export default function AdminProfilePage() {
     try {
       const credential = EmailAuthProvider.credential(user.email, data.password);
       await reauthenticateWithCredential(auth.currentUser, credential);
-      await updateEmail(auth.currentUser, data.newEmail);
-      toast({ title: 'Email Actualizat', description: 'Adresa de email a fost actualizată cu succes.' });
+      await verifyBeforeUpdateEmail(auth.currentUser, data.newEmail);
+      toast({ 
+        title: 'Email de Verificare Trimis', 
+        description: 'Verificați noul email pentru a finaliza modificarea.' 
+      });
       emailForm.reset({ newEmail: data.newEmail, password: '' });
     } catch (error: any) {
       toast({
@@ -108,7 +111,7 @@ export default function AdminProfilePage() {
         title: 'Eroare la actualizarea email-ului',
         description: error.code === 'auth/wrong-password' 
             ? 'Parola introdusă este incorectă.'
-            : error.message,
+            : 'A apărut o eroare. Vă rugăm să încercați din nou.',
       });
     } finally {
       setIsSavingEmail(false);
