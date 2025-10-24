@@ -67,4 +67,17 @@ export const PracticeAreaSchema = z.object({
   description: z.string().min(10, { message: "Descrierea trebuie să aibă cel puțin 10 caractere." }),
 });
 
+export const profileSchema = z.object({
+  displayName: z.string().min(2, { message: 'Numele trebuie să aibă cel puțin 2 caractere.' }),
+});
+
+export const photoSchema = z.object({
+  photoURL: z.string().url({ message: 'Vă rugăm să introduceți un URL valid.' }).or(z.literal('')),
+});
+
+export const emailSchema = z.object({
+  newEmail: z.string().email({ message: "Vă rugăm să introduceți o adresă de email validă." }),
+  password: z.string().min(1, { message: 'Vă rugăm să introduceți parola curentă.' }),
+});
+
   

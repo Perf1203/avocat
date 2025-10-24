@@ -1,7 +1,7 @@
 
 "use client";
 
-import { LogOut, Menu, Scale } from "lucide-react";
+import { LogOut, Menu, Scale, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -95,11 +95,21 @@ export function Header() {
             href="/admin"
             className={cn(
               "transition-colors hover:text-primary font-bold",
-              pathname.startsWith('/admin') ? "text-primary" : "text-muted-foreground"
+              pathname.startsWith('/admin') && !pathname.startsWith('/admin/profile') ? "text-primary" : "text-muted-foreground"
             )}
             onClick={() => setIsMobileMenuOpen(false)}
           >
             Admin
+          </Link>
+           <Link
+            href="/admin/profile"
+            className={cn(
+              "transition-colors hover:text-primary",
+              pathname === "/admin/profile" ? "text-primary" : "text-muted-foreground"
+            )}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            Profil
           </Link>
           <Button
             variant="ghost"

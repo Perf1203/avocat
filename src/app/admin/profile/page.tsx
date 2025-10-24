@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useAuth, useUser } from '@/firebase';
-import { updateProfile, sendPasswordResetEmail } from 'firebase/auth';
+import { updateProfile, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updateEmail } from 'firebase/auth';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,20 +14,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, User, Image as ImageIcon, Lock } from 'lucide-react';
+import { ArrowLeft, Loader2, User, Image as ImageIcon, Lock, Mail } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-
-const profileSchema = z.object({
-  displayName: z.string().min(2, { message: 'Numele trebuie să aibă cel puțin 2 caractere.' }),
-});
-
-const photoSchema = z.object({
-  photoURL: z.string().url({ message: 'Vă rugăm să introduceți un URL valid.' }).or(z.literal('')),
-});
+import { profileSchema, photoSchema, emailSchema } from '@/lib/schemas';
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 type PhotoFormValues = z.infer<typeof photoSchema>;
+type EmailFormValues = z.infer<typeof emailSchema>;
 
 export default function AdminProfilePage() {
   const auth = useAuth();
@@ -38,6 +31,7 @@ export default function AdminProfilePage() {
 
   const [isSavingName, setIsSavingName] = useState(false);
   const [isSavingPhoto, setIsSavingPhoto] = useState(false);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -52,6 +46,14 @@ export default function AdminProfilePage() {
       photoURL: '',
     },
   });
+  
+  const emailForm = useForm<EmailFormValues>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: {
+      newEmail: '',
+      password: '',
+    },
+  });
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -60,8 +62,9 @@ export default function AdminProfilePage() {
     if (user) {
       profileForm.setValue('displayName', user.displayName || '');
       photoForm.setValue('photoURL', user.photoURL || '');
+      emailForm.setValue('newEmail', user.email || '');
     }
-  }, [user, isUserLoading, router, profileForm, photoForm]);
+  }, [user, isUserLoading, router, profileForm, photoForm, emailForm]);
 
   const onUpdateName = async (data: ProfileFormValues) => {
     if (!auth.currentUser) return;
@@ -86,6 +89,29 @@ export default function AdminProfilePage() {
       toast({ variant: 'destructive', title: 'Eroare', description: error.message });
     } finally {
       setIsSavingPhoto(false);
+    }
+  };
+  
+   const onUpdateEmail = async (data: EmailFormValues) => {
+    if (!auth.currentUser || !user?.email) return;
+
+    setIsSavingEmail(true);
+    try {
+      const credential = EmailAuthProvider.credential(user.email, data.password);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updateEmail(auth.currentUser, data.newEmail);
+      toast({ title: 'Email Actualizat', description: 'Adresa de email a fost actualizată cu succes.' });
+      emailForm.reset({ newEmail: data.newEmail, password: '' });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Eroare la actualizarea email-ului',
+        description: error.code === 'auth/wrong-password' 
+            ? 'Parola introdusă este incorectă.'
+            : error.message,
+      });
+    } finally {
+      setIsSavingEmail(false);
     }
   };
   
@@ -167,6 +193,36 @@ export default function AdminProfilePage() {
               </Button>
             </CardFooter>
            </form>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center gap-4">
+            <Mail className="w-6 h-6 text-primary" />
+            <div className="flex-1">
+              <CardTitle>Schimbă Adresa de Email</CardTitle>
+              <CardDescription>Actualizați adresa de email. Va trebui să confirmați parola.</CardDescription>
+            </div>
+          </CardHeader>
+          <form onSubmit={emailForm.handleSubmit(onUpdateEmail)}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newEmail">Email Nou</Label>
+                <Input id="newEmail" type="email" {...emailForm.register('newEmail')} />
+                {emailForm.formState.errors.newEmail && <p className="text-sm text-destructive">{emailForm.formState.errors.newEmail.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Parola Curentă</Label>
+                <Input id="password" type="password" {...emailForm.register('password')} placeholder="Introduceți parola pentru a confirma"/>
+                {emailForm.formState.errors.password && <p className="text-sm text-destructive">{emailForm.formState.errors.password.message}</p>}
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <Button type="submit" disabled={isSavingEmail}>
+                {isSavingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvează Email
+              </Button>
+            </CardFooter>
+          </form>
         </Card>
 
         <Card>
