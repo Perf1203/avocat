@@ -80,4 +80,14 @@ export const emailSchema = z.object({
   password: z.string().min(1, { message: 'Vă rugăm să introduceți parola curentă.' }),
 });
 
+export const ChatMessageSchema = z.object({
+  text: z.string().optional(),
+  fileUrl: z.string().optional(),
+  fileName: z.string().optional(),
+  fileType: z.string().optional(),
+}).refine(data => data.text || data.fileUrl, {
+  message: "Mesajul trebuie să conțină fie text, fie un fișier.",
+  path: ["text"],
+});
+
   

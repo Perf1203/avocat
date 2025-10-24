@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, LogOut, User as UserIcon, Mail, Info, CreditCard, CheckCircle, FileDown, Calendar, FileSignature } from 'lucide-react';
+import { Send, LogOut, User as UserIcon, Mail, Info, CreditCard, CheckCircle, FileDown, Calendar, FileSignature, Paperclip, File as FileIcon, Image as ImageIcon, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -21,6 +21,7 @@ import { generateBill } from '@/lib/generate-bill';
 import { generateContract } from '@/lib/generate-contract';
 import { SignatureDialog } from './signature-dialog';
 
+const FILE_SIZE_LIMIT = 1024 * 1024 * 0.9; // 0.9 MB to stay safely under Firestore's 1MB limit
 
 interface ChatDrawerProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   const { user } = useUser();
   const { toast } = useToast();
   const [message, setMessage] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -137,7 +140,7 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             adminId: 'default-admin-id',
             createdAt: serverTimestamp(),
             lastMessageAt: serverTimestamp(),
-            lastMessageText: message || 'Conversație nouă începută',
+            lastMessageText: file ? file.name : (message || 'Conversație nouă începută'),
             isReadByAdmin: false,
             guestName: '',
             guestEmail: '',
@@ -151,9 +154,18 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
         return newConversationId;
   }
 
+  const fileToDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+    });
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firestore || !user || !message.trim()) return;
+    if (!firestore || !user || (!message.trim() && !file)) return;
 
     let currentConversationId = conversationId;
 
@@ -162,9 +174,33 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
         if (!currentConversationId) return;
     }
 
+    let fileData: { fileUrl: string, fileName: string, fileType: string } | null = null;
+    if (file) {
+      if (file.size > FILE_SIZE_LIMIT) {
+        toast({
+          variant: 'destructive',
+          title: 'Fișier prea mare',
+          description: `Fișierul este prea mare. Limita este de ${Math.floor(FILE_SIZE_LIMIT / (1024 * 1024))}MB.`,
+        });
+        return;
+      }
+      try {
+        const fileUrl = await fileToDataURL(file);
+        fileData = {
+          fileUrl,
+          fileName: file.name,
+          fileType: file.type || 'application/octet-stream'
+        };
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Eroare fișier', description: 'Nu s-a putut citi fișierul.' });
+        return;
+      }
+    }
+
     const messagesCol = collection(firestore, 'conversations', currentConversationId, 'messages');
     await addDoc(messagesCol, {
       text: message,
+      ...fileData,
       senderId: user.uid,
       timestamp: serverTimestamp(),
     });
@@ -172,11 +208,12 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     const convoRef = doc(firestore, 'conversations', currentConversationId);
     await setDoc(convoRef, {
         lastMessageAt: serverTimestamp(),
-        lastMessageText: message,
+        lastMessageText: file ? file.name : message,
         isReadByAdmin: false,
     }, { merge: true });
 
     setMessage('');
+    setFile(null);
   };
 
   const handleSaveIdentification = () => {
@@ -268,6 +305,40 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
         </div>
     </div>
   );
+
+  const FileAttachmentCard = ({ msg }: { msg: any }) => {
+    const isImage = msg.fileType?.startsWith('image/');
+    const Icon = isImage ? ImageIcon : FileIcon;
+
+    return (
+        <div className={cn('flex items-end gap-2', msg.senderId === user?.uid ? 'justify-end' : 'justify-start')}>
+            {msg.senderId !== user?.uid && (
+                <Avatar className="h-8 w-8">
+                    <AvatarFallback>A</AvatarFallback>
+                </Avatar>
+            )}
+            <div className={cn('max-w-md rounded-lg text-sm', msg.senderId === user?.uid ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
+                {isImage && msg.fileUrl && (
+                    <a href={msg.fileUrl} download={msg.fileName} target="_blank" rel="noopener noreferrer">
+                      <Image src={msg.fileUrl} alt={msg.fileName} width={256} height={256} className="rounded-t-lg object-cover max-w-xs" />
+                    </a>
+                )}
+                <div className="p-3">
+                    <div className="flex items-center gap-3">
+                        <Icon className="h-8 w-8 shrink-0" />
+                        <div className="flex-1 overflow-hidden">
+                            <p className="font-semibold truncate">{msg.fileName}</p>
+                            <a href={msg.fileUrl} download={msg.fileName} className="text-xs flex items-center gap-1 hover:underline">
+                                <Download size={12} /> Descarcă
+                            </a>
+                        </div>
+                    </div>
+                    {msg.text && <p className="mt-2 pt-2 border-t border-black/20 dark:border-white/20">{msg.text}</p>}
+                </div>
+            </div>
+        </div>
+    );
+};
   
   const isChatting = messages && messages.length > 0;
   const isMandatoryIdentification = conversation?.identificationRequested && !conversation?.guestName;
@@ -309,6 +380,9 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             { showIdentification && renderIdentificationForm() }
             <div className="p-4 space-y-4">
             {messages && messages.map((msg: any) => {
+                 if (msg.fileUrl) {
+                    return <FileAttachmentCard key={msg.id} msg={msg} />;
+                 }
                  if (msg.isSystemMessage) {
                     if (msg.systemMessageType === 'schedule_request') {
                         return (
@@ -420,19 +494,48 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
             </div>
         </ScrollArea>
         <div className="p-4 border-t">
-          <form onSubmit={handleSendMessage} className="flex gap-2">
-            <Input
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Scrieți mesajul..."
-              autoComplete="off"
-              disabled={showIdentification}
-            />
-            <Button type="submit" size="icon" disabled={!message.trim() || showIdentification}>
-              <Send className="h-4 w-4" />
-              <span className="sr-only">Trimite</span>
-            </Button>
-          </form>
+          <div className="relative w-full">
+            {file && (
+              <div className="absolute bottom-full left-0 w-full p-2 bg-secondary/80 backdrop-blur-sm rounded-t-lg">
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <FileIcon className="h-5 w-5 shrink-0" />
+                    <span className="truncate">{file.name}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setFile(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
+              <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={showIdentification}>
+                <Paperclip />
+              </Button>
+              <Input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+                  className="hidden"
+              />
+              <Input
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Scrieți mesajul..."
+                autoComplete="off"
+                disabled={showIdentification}
+              />
+              <Button type="submit" size="icon" disabled={(!message.trim() && !file) || showIdentification}>
+                <Send className="h-4 w-4" />
+                <span className="sr-only">Trimite</span>
+              </Button>
+            </form>
+          </div>
         </div>
         <SignatureDialog
             isOpen={isSignatureDialogOpen}
