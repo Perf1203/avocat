@@ -274,6 +274,10 @@
         "whatsAppNumber": {
           "type": "string",
           "description": "The phone number to be used for WhatsApp chat."
+        },
+        "contractTemplate": {
+            "type": "string",
+            "description": "The default template text for service contracts."
         }
       }
     },
@@ -379,7 +383,8 @@
                 "guestSignature": { "type": "string", "description": "Data URL of the guest's signature image." },
                 "guestSignedAt": { "type": "string", "format": "date-time" },
                 "adminSignature": { "type": "string", "description": "Data URL of the admin's signature image." },
-                "adminSignedAt": { "type": "string", "format": "date-time" }
+                "adminSignedAt": { "type": "string", "format": "date-time" },
+                "text": { "type": "string", "description": "The full text of the contract at the time of sending." }
             }
         }
       },

@@ -67,64 +67,74 @@ export const generateContract = (conversation: any, websiteName: string, adminNa
     
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    const objectText = `Prestatorul se obligă să furnizeze Beneficiarului servicii de consultanță juridică online prin intermediul platformei de chat, conform termenilor și condițiilor agreate în conversație.`;
-    doc.text(normalizeText(objectText), 14, 105, { maxWidth: 180 });
+    const contractText = contract?.text || 'Termeni si conditii standard.';
+    const splitText = doc.splitTextToSize(normalizeText(contractText), 180);
+    doc.text(splitText, 14, 105);
+
+    let finalY = doc.getTextDimensions(splitText).h + 105;
+
 
     // --- Signatures ---
+    const signatureY = finalY + 20;
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(textColor);
-    doc.text(normalizeText('SEMNĂTURI'), 14, 140);
+    doc.text(normalizeText('SEMNĂTURI'), 14, signatureY);
     
-    const signatureY = 150;
     const signatureBoxWidth = 80;
     const signatureBoxHeight = 40;
     const guestSignatureX = doc.internal.pageSize.getWidth() - signatureBoxWidth - 14;
 
     // Admin Signature
     doc.setDrawColor(grayColor);
-    doc.rect(14, signatureY, signatureBoxWidth, signatureBoxHeight);
+    doc.rect(14, signatureY + 10, signatureBoxWidth, signatureBoxHeight);
     if (contract.adminSignature) {
-        doc.addImage(contract.adminSignature, 'PNG', 16, signatureY + 2, signatureBoxWidth - 4, signatureBoxHeight - 4);
+        doc.addImage(contract.adminSignature, 'PNG', 16, signatureY + 12, signatureBoxWidth - 4, signatureBoxHeight - 4);
     }
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('PRESTATOR,', 14, signatureY + signatureBoxHeight + 7);
+    doc.text('PRESTATOR,', 14, signatureY + 10 + signatureBoxHeight + 7);
     doc.setFont('helvetica', 'normal');
-    doc.text(normalizeText(adminName), 14, signatureY + signatureBoxHeight + 12);
+    doc.text(normalizeText(adminName), 14, signatureY + 10 + signatureBoxHeight + 12);
     if(contract.adminSignedAt) {
       doc.setFontSize(9);
       doc.setTextColor(grayColor);
-      doc.text(normalizeText(`Data: ${formatDate(contract.adminSignedAt)}`), 14, signatureY + signatureBoxHeight + 17);
+      doc.text(normalizeText(`Data: ${formatDate(contract.adminSignedAt)}`), 14, signatureY + 10 + signatureBoxHeight + 17);
     }
     
     // Guest Signature
-    doc.rect(guestSignatureX, signatureY, signatureBoxWidth, signatureBoxHeight);
+    doc.rect(guestSignatureX, signatureY + 10, signatureBoxWidth, signatureBoxHeight);
     if (contract.guestSignature) {
-        doc.addImage(contract.guestSignature, 'PNG', guestSignatureX + 2, signatureY + 2, signatureBoxWidth - 4, signatureBoxHeight - 4);
+        doc.addImage(contract.guestSignature, 'PNG', guestSignatureX + 2, signatureY + 12, signatureBoxWidth - 4, signatureBoxHeight - 4);
     }
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('BENEFICIAR,', guestSignatureX, signatureY + signatureBoxHeight + 7);
+    doc.text('BENEFICIAR,', guestSignatureX, signatureY + 10 + signatureBoxHeight + 7);
     doc.setFont('helvetica', 'normal');
-    doc.text(normalizeText(guestName), guestSignatureX, signatureY + signatureBoxHeight + 12);
+    doc.text(normalizeText(guestName), guestSignatureX, signatureY + 10 + signatureBoxHeight + 12);
      if(contract.guestSignedAt) {
       doc.setFontSize(9);
       doc.setTextColor(grayColor);
-      doc.text(normalizeText(`Data: ${formatDate(contract.guestSignedAt)}`), guestSignatureX, signatureY + signatureBoxHeight + 17);
+      doc.text(normalizeText(`Data: ${formatDate(contract.guestSignedAt)}`), guestSignatureX, signatureY + 10 + signatureBoxHeight + 17);
     }
 
     // --- Status ---
+    let statusY = signatureY + 10 + signatureBoxHeight + 35;
+    if (statusY > doc.internal.pageSize.getHeight() - 30) {
+        doc.addPage();
+        statusY = 20;
+    }
+
     if(contract.status === 'signed') {
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor('#276749'); // Green
-      doc.text('STATUS: SEMNAT', doc.internal.pageSize.getWidth() / 2, signatureY + signatureBoxHeight + 35, { align: 'center' });
+      doc.text('STATUS: SEMNAT', doc.internal.pageSize.getWidth() / 2, statusY, { align: 'center' });
     } else {
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor('#C53030'); // Red
-      doc.text(normalizeText('STATUS: AȘTEAPTĂ SEMNĂTURA'), doc.internal.pageSize.getWidth() / 2, signatureY + signatureBoxHeight + 35, { align: 'center' });
+      doc.text(normalizeText('STATUS: AȘTEAPTĂ SEMNĂTURA'), doc.internal.pageSize.getWidth() / 2, statusY, { align: 'center' });
     }
 
     // --- Footer ---
@@ -138,5 +148,3 @@ export const generateContract = (conversation: any, websiteName: string, adminNa
     // --- Save ---
     doc.save(`Contract-${guestName.replace(/\s/g, '_')}.pdf`);
 };
-
-    

@@ -306,6 +306,7 @@ export default function ChatConversationPage() {
           status: 'pending',
           guestSignature: null,
           adminSignature: null,
+          text: settings?.contractTemplate || 'Prestatorul se obligă să furnizeze Beneficiarului servicii de consultanță juridică online prin intermediul platformei de chat, conform termenilor și condițiilor agreate în conversație.',
       };
 
       updateDocumentNonBlocking(conversationRef, { contract: contractData });
@@ -588,5 +589,3 @@ export default function ChatConversationPage() {
     </div>
   );
 }
-
-    

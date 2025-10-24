@@ -21,7 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate, Newspaper, MoreVertical, AlertCircle } from 'lucide-react';
+import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate, Newspaper, MoreVertical, AlertCircle, FileSignature } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +46,7 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Textarea } from '@/components/ui/textarea';
 
 const allPossibleTimes = [
     "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
@@ -76,6 +77,7 @@ export default function AdminPage() {
 
   const [availableHours, setAvailableHours] = useState<string[]>([]);
   const [availableDays, setAvailableDays] = useState<number[]>([]);
+  const [contractTemplate, setContractTemplate] = useState('');
 
   // Chat settings state
   const [isChatEnabled, setIsChatEnabled] = useState(false);
@@ -130,6 +132,7 @@ export default function AdminPage() {
       setIsChatEnabled(scheduleSettings.isChatEnabled ?? false);
       setChatType(scheduleSettings.chatType ?? 'whatsapp');
       setWhatsAppNumber(scheduleSettings.whatsAppNumber ?? '');
+      setContractTemplate(scheduleSettings.contractTemplate || 'Prestatorul se obligă să furnizeze Beneficiarului servicii de consultanță juridică online prin intermediul platformei de chat, conform termenilor și condițiilor agreate în conversație.');
     }
   }, [scheduleSettings]);
 
@@ -746,6 +749,30 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileSignature className="h-5 w-5" />
+                Setări Contract
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="contract-template">Șablon Contract</Label>
+                  <Textarea
+                    id="contract-template"
+                    rows={8}
+                    value={contractTemplate}
+                    onChange={(e) => setContractTemplate(e.target.value)}
+                    onBlur={() => handleAdminSettingsUpdate('contractTemplate', contractTemplate)}
+                    placeholder="Introduceți aici textul standard al contractului..."
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Acest text va fi folosit ca bază pentru toate contractele noi.
+                  </p>
+                </div>
             </CardContent>
           </Card>
         </div>
