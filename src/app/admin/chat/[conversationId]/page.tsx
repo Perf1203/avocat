@@ -487,8 +487,16 @@ export default function ChatConversationPage() {
                                     </div>
                                 ) : (
                                     <div className='text-center space-y-3'>
-                                        <p className="text-sm text-amber-600">{contract.guestSignature ? `Așteaptă semnătura dvs.` : 'Așteaptă semnăturile'}</p>
-                                        {contract.guestSignature && <div className="p-2 border bg-white rounded-md max-w-xs mx-auto"><Image src={contract.guestSignature} alt="Semnatura Client" width={150} height={75} /></div>}
+                                        <div className='space-y-1'>
+                                            {contract.guestSignature ? 
+                                                <p className="text-sm font-medium text-green-600">✓ Semnat de Client</p>
+                                                : <p className="text-sm text-amber-600">Așteaptă semnătura clientului</p>
+                                            }
+                                            {contract.adminSignature ?
+                                                <p className="text-sm font-medium text-green-600">✓ Semnat de Administrator</p>
+                                                : <p className="text-sm text-amber-600">Așteaptă semnătura dvs.</p>
+                                            }
+                                        </div>
                                         {canAdminSign ? (
                                           <Button size="sm" onClick={() => setSignatureDialogOpen(true)}>Semnează Contractul</Button>
                                         ) : (

@@ -237,7 +237,7 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
   
   const handleDownloadContract = () => {
     if (!conversation || !conversation.contract) return;
-    generateContract(conversation, websiteName, "Administrator");
+    generateContract(conversation, websiteName);
   };
 
 
@@ -328,16 +328,21 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
                                 {isContractSigned ? (
                                     <div className='text-center space-y-3'>
                                         <p className="text-sm text-green-600 font-medium">✓ Semnat de ambele părți</p>
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <div className="p-2 border bg-white rounded-md"><span className="text-xs text-muted-foreground">Client</span><Image src={contract.guestSignature} alt="Semnatura Client" width={150} height={75} /></div>
-                                          <div className="p-2 border bg-white rounded-md"><span className="text-xs text-muted-foreground">Admin</span><Image src={contract.adminSignature} alt="Semnatura Admin" width={150} height={75} /></div>
+                                        <div className="grid grid-cols-2 gap-2 text-center text-xs text-muted-foreground">
+                                          <div className="p-2 border bg-white rounded-md flex flex-col items-center justify-center"><span>Client</span><span className='font-semibold text-green-600'>✓ SEMNAT</span></div>
+                                          <div className="p-2 border bg-white rounded-md flex flex-col items-center justify-center"><span>Admin</span><span className='font-semibold text-green-600'>✓ SEMNAT</span></div>
                                         </div>
                                         <Button size="sm" variant="secondary" onClick={handleDownloadContract}><FileDown className="mr-2"/>Descarcă PDF</Button>
                                     </div>
                                 ) : canGuestSign ? (
                                     <div className='text-center space-y-3'>
-                                        <p className="text-sm text-amber-600">{contract.adminSignature ? 'Așteaptă semnătura dvs.' : 'Așteaptă semnăturile'}</p>
-                                        {contract.adminSignature && <div className="p-2 border bg-white rounded-md max-w-xs mx-auto"><Image src={contract.adminSignature} alt="Semnatura Admin" width={150} height={75} /></div>}
+                                         <div className='space-y-1'>
+                                            {contract.adminSignature ? 
+                                                <p className="text-sm font-medium text-green-600">✓ Semnat de Administrator</p>
+                                                : <p className="text-sm text-amber-600">Așteaptă semnătura administratorului</p>
+                                            }
+                                            <p className="text-sm text-amber-600">Așteaptă semnătura dvs.</p>
+                                        </div>
                                         <Button size="sm" onClick={() => setSignatureDialogOpen(true)}>Semnează Contractul</Button>
                                     </div>
                                 ) : (
@@ -438,5 +443,3 @@ export function ChatDrawer({ isOpen, onOpenChange }: ChatDrawerProps) {
     </Sheet>
   );
 }
-
-    
