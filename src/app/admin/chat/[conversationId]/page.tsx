@@ -323,7 +323,7 @@ export default function ChatConversationPage() {
   const handleSignContract = () => {
       if (!conversationRef || !user || !conversation.contract) return;
 
-      const signatureData = {
+      const signatureData: { [key: string]: any } = {
           'contract.adminSignature': user.displayName || 'Administrator',
           'contract.adminSignedAt': new Date(),
       };
@@ -449,12 +449,8 @@ export default function ChatConversationPage() {
                     if (msg.isSystemMessage) {
                         if (msg.systemMessageType === 'schedule_request') {
                           return (
-                            <div key={msg.id} className="p-4 my-2 rounded-lg border bg-secondary/50 text-center">
-                                <h4 className="font-semibold flex items-center justify-center gap-2 mb-3"><Calendar /> Solicitare de Programare</h4>
-                                <p className="text-sm text-muted-foreground mb-3">Administratorul v-a invitat să programați o consultație.</p>
-                                <Button asChild size="sm">
-                                    <Link href="/schedule">Mergi la Programări</Link>
-                                </Button>
+                            <div key={msg.id} className="text-center text-xs text-muted-foreground my-4">
+                                --- Solicitare de programare trimisă ---
                             </div>
                           );
                         }
@@ -477,16 +473,6 @@ export default function ChatConversationPage() {
                                 )}
                             </div>
                           );
-                        }
-                        if (msg.systemMessageType === 'payment_request' && msg.paymentLink) {
-                            return (
-                                <div key={msg.id} className="p-4 my-2 rounded-lg border bg-secondary/50 text-center">
-                                    <h4 className="font-semibold flex items-center justify-center gap-2 mb-3"><CreditCard /> Solicitare de Plată</h4>
-                                    <Button asChild size="sm">
-                                        <Link href={msg.paymentLink} target="_blank">Mergi la Plată</Link>
-                                    </Button>
-                                </div>
-                            )
                         }
                         return (
                             <div key={msg.id} className="text-center text-xs text-muted-foreground my-4">
