@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate, Newspaper, MoreVertical, AlertCircle, FileSignature, Cog, Wifi, WifiOff } from 'lucide-react';
+import { Trash2, Settings, Clock, MessageSquare, CircleUserRound, Ban, LayoutTemplate, Newspaper, MoreVertical, AlertCircle, FileSignature, Cog, Wifi, WifiOff, Search } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,6 +79,10 @@ export default function AdminPage() {
   const [availableHours, setAvailableHours] = useState<string[]>([]);
   const [availableDays, setAvailableDays] = useState<number[]>([]);
   const [contractTemplate, setContractTemplate] = useState('');
+
+  // SEO settings state
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
 
   // Chat settings state
   const [isChatEnabled, setIsChatEnabled] = useState(false);
@@ -161,6 +165,8 @@ export default function AdminPage() {
       setWhatsAppNumber(scheduleSettings.whatsAppNumber ?? '');
       setShowChatOnlyIfAdminIsAvailable(scheduleSettings.showChatOnlyIfAdminIsAvailable ?? false);
       setContractTemplate(scheduleSettings.contractTemplate || 'Prestatorul se obligă să furnizeze Beneficiarului servicii de consultanță juridică online prin intermediul platformei de chat, conform termenilor și condițiilor agreate în conversație.');
+      setSeoTitle(scheduleSettings.seoTitle || '');
+      setSeoDescription(scheduleSettings.seoDescription || '');
     }
   }, [scheduleSettings]);
 
@@ -374,7 +380,7 @@ export default function AdminPage() {
                                 <CircleUserRound className="text-muted-foreground"/>
                                 <div className="flex flex-col">
                                     <span>{convo.guestName || `Vizitator`}</span>
-                                    <span className="text-xs text-muted-foreground">{convo.guestEmail || (convo.guestId ? convo.guestId.substring(0,8)+'...' : 'ID Indisponibil')}</span>
+                                    <span className="text-xs text-muted-foreground">{convo.guestEmail || (convo.guestId ? `${convo.guestId.substring(0, 8)}...` : 'ID Indisponibil')}</span>
                                 </div>
                             </div>
                         </TableCell>
@@ -630,6 +636,37 @@ export default function AdminPage() {
               <p className="text-sm text-muted-foreground mt-2">
                 Permite utilizatorilor să își creeze un cont nou din antet.
               </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Setări SEO
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="seo-title">Titlu SEO</Label>
+                <Input
+                  id="seo-title"
+                  value={seoTitle}
+                  onChange={(e) => setSeoTitle(e.target.value)}
+                  onBlur={() => handleAdminSettingsUpdate('seoTitle', seoTitle)}
+                  placeholder="ex: Cabinet de avocat..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="seo-description">Descriere SEO</Label>
+                <Textarea
+                  id="seo-description"
+                  value={seoDescription}
+                  onChange={(e) => setSeoDescription(e.target.value)}
+                  onBlur={() => handleAdminSettingsUpdate('seoDescription', seoDescription)}
+                  placeholder="Descrieți pe scurt serviciile dvs..."
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">Aceste informații ajută la clasarea paginii în motoarele de căutare precum Google.</p>
             </CardContent>
           </Card>
            <Card>

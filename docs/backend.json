@@ -244,6 +244,14 @@
             "type": "string",
             "description": "The public name of the website."
         },
+        "seoTitle": {
+            "type": "string",
+            "description": "The SEO title for the website."
+        },
+        "seoDescription": {
+            "type": "string",
+            "description": "The SEO description for the website."
+        },
         "appointmentDurationMinutes": {
           "type": "number",
           "description": "The duration of an appointment in minutes, used for cooldown."

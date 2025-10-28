@@ -1,7 +1,6 @@
 
-'use client';
-
-import { useState, useEffect } from 'react';
+import { initializeFirebase } from '@/firebase';
+import { getDoc, doc } from 'firebase/firestore';
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,31 +8,39 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { ChatWidget } from "@/components/chat-widget";
-import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from "firebase/firestore";
 
-// export const metadata: Metadata = {
-//   title: "Avocat Law",
-//   description: "Partenerul dumneavoastră juridic de încredere pentru provocări complexe.",
-// };
+const { firestore } = initializeFirebase();
 
-function AppLayout({ children }: { children: React.ReactNode }) {
-  const { firestore } = useFirebase();
-
-  const settingsRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return doc(firestore, 'admin_settings', 'schedule');
-  }, [firestore]);
+export async function generateMetadata(): Promise<Metadata> {
+  let seoTitle = "Avocat Law";
+  let seoDescription = "Partenerul dumneavoastră juridic de încredere pentru provocări complexe.";
   
-  const { data: settings } = useDoc(settingsRef);
-  const websiteName = settings?.websiteName || "Avocat Law";
+  try {
+    const settingsRef = doc(firestore, 'admin_settings', 'schedule');
+    const settingsSnap = await getDoc(settingsRef);
 
-  useEffect(() => {
-    document.title = websiteName;
-  }, [websiteName]);
+    if (settingsSnap.exists()) {
+      const settings = settingsSnap.data();
+      seoTitle = settings.seoTitle || settings.websiteName || seoTitle;
+      seoDescription = settings.seoDescription || seoDescription;
+    }
+  } catch (error) {
+    console.error("Failed to fetch SEO settings for metadata:", error);
+  }
 
+  return {
+    title: seoTitle,
+    description: seoDescription,
+  };
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <>
+    <html lang="ro">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -43,29 +50,16 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         />
       </head>
       <body className="font-body antialiased">
-        <div className="flex min-h-screen flex-col">
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
-        <ChatWidget />
-        <Toaster />
+        <FirebaseClientProvider>
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+          <ChatWidget />
+          <Toaster />
+        </FirebaseClientProvider>
       </body>
-    </>
-  );
-}
-
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="ro">
-      <FirebaseClientProvider>
-        <AppLayout>{children}</AppLayout>
-      </FirebaseClientProvider>
     </html>
   );
 }
